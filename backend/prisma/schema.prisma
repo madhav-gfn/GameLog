@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  username        String   @unique
+  password        String
+  isStreamer      Boolean  @default(false)
+  youtubeUrl      String?  // YouTube channel link
+  youtubeChannelId String? // For fetching stream data
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userGames       UserGame[]
+  streamerGames   StreamerGame[]
+}
+
+model Game {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  releaseDate   DateTime?
+  averageRating Float    @default(0)
+  ratingCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userGames     UserGame[]
+  streamerGames StreamerGame[]
+}
+
+model UserGame {
+  id              String   @id @default(uuid())
+  rating          Int?     // 1-10 scale
+  review          String?  // User's thoughts about the game
+  status          Status   @default(PLANNING) // PLANNING, PLAYING, COMPLETED, DROPPED
+  progressPercent Int?     // 0-100
+  hoursPlayed     Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  playSessions PlaySession[]
+
+  @@unique([userId, gameId])
+}
+
+model PlaySession {
+  id        String   @id @default(uuid())
+  duration  Int?     // in minutes
+  notes     String?  // Session thoughts/notes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userGameId String
+  userGame   UserGame @relation(fields: [userGameId], references: [id], onDelete: Cascade)
+}
+
+model StreamerGame {
+  id            String   @id @default(uuid())
+  title         String   // Stream title or video title
+  youtubeUrl    String   // Link to stream/video
+  viewCount     Int?     // YouTube view count
+  uploadedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  streamerId String
+  streamer   User     @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
+  @@index([streamerId])
+}
+
+enum Status {
+  PLANNING
+  PLAYING
+  COMPLETED
+  DROPPED
+}
