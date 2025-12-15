@@ -4,91 +4,253 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GameStatus {
+  WISHLIST
+  BACKLOG
+  PLAYING
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+enum ActivityType {
+  STARTED
+  SESSION
+  COMPLETED
+  REVIEW
+  COMMENT
+  LIST_CREATED
+  GAME_ADDED
+}
+
+enum StreamPlatform {
+  TWITCH
+  YOUTUBE
+  KICK
+  FACEBOOK
+  OTHER
+}
+
+enum ListType {
+  CUSTOM
+  FAVORITES
+  RECOMMENDATIONS
+  YEAR_END
 }
 
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
-  username        String   @unique
-  password        String
-  isStreamer      Boolean  @default(false)
-  youtubeUrl      String?  // YouTube channel link
-  youtubeChannelId String? // For fetching stream data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String      @id @default(uuid())
+  googleId      String?     @unique
+  username      String      @unique
+  email         String      @unique
+  passwordHash  String?
+  displayName   String?
+  bio           String?
+  avatar        String?
+  isStreamer    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  userGames       UserGame[]
-  streamerGames   StreamerGame[]
+  games         UserGame[]
+  sessions      PlaySession[]
+  comments      Comment[]
+  lists         GameList[]
+  activities    Activity[]
+  streams       Stream[]
+
+  following     Follow[]    @relation("Following")
+  followers     Follow[]    @relation("Followers")
+
+  @@index([username])
+  @@index([createdAt])
 }
 
 model Game {
-  id            String   @id @default(uuid())
-  title         String
-  description   String?
-  releaseDate   DateTime?
-  averageRating Float    @default(0)
-  ratingCount   Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String      @id @default(uuid())
+  rawgId          Int         @unique
+  title           String
+  description     String?
+  coverImage      String?
+  backgroundImage String?
+  releaseDate     DateTime?
+  genres          String[]    @default([])
+  platforms       String[]    @default([])
+  developer       String?
+  publisher       String?
+  metacriticScore Int?
+  avgRating       Float       @default(0)
+  ratingCount     Int         @default(0)
+  playingCount    Int         @default(0)
+  completedCount  Int         @default(0)
+  abandonedCount  Int         @default(0)
+  wishlistCount   Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  userGames     UserGame[]
-  streamerGames StreamerGame[]
+  users           UserGame[]
+  sessions        PlaySession[]
+  comments        Comment[]
+  listItems       GameListItem[]
+  activities      Activity[]
+  streams         Stream[]
+
+  @@index([title])
+  @@index([avgRating])
+  @@index([releaseDate])
+  @@index([genres])
 }
 
 model UserGame {
-  id              String   @id @default(uuid())
-  rating          Int?     // 1-10 scale
-  review          String?  // User's thoughts about the game
-  status          Status   @default(PLANNING) // PLANNING, PLAYING, COMPLETED, DROPPED
-  progressPercent Int?     // 0-100
-  hoursPlayed     Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String      @id @default(uuid())
+  userId       String
+  gameId       String
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       GameStatus
+  rating       Int?        @db.SmallInt // 1-10 scale
+  review       String?
+  isPrivate    Boolean     @default(false)
+  isFavorite   Boolean     @default(false)
+  playCount    Int         @default(1)
+  totalHours   Float       @default(0)
 
-  gameId String
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  playSessions PlaySession[]
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game         Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  sessions     PlaySession[]
 
   @@unique([userId, gameId])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
 }
 
 model PlaySession {
+  id              String     @id @default(uuid())
+  userId          String
+  gameId          String
+  userGameId      String?
+
+  durationMinutes Int
+  platform        String
+  note            String?
+  playedAt        DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game            Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userGame        UserGame?  @relation(fields: [userGameId], references: [id], onDelete: Cascade)
+
+  streams         Stream[]
+
+  @@index([playedAt])
+  @@index([userId])
+}
+
+model Comment {
   id        String   @id @default(uuid())
-  duration  Int?     // in minutes
-  notes     String?  // Session thoughts/notes
+  userId    String
+  gameId    String
+  content   String
+  isReview  Boolean  @default(false)
+  likes     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userGameId String
-  userGame   UserGame @relation(fields: [userGameId], references: [id], onDelete: Cascade)
-}
-
-model StreamerGame {
-  id            String   @id @default(uuid())
-  title         String   // Stream title or video title
-  youtubeUrl    String   // Link to stream/video
-  viewCount     Int?     // YouTube view count
-  uploadedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  streamerId String
-  streamer   User     @relation(fields: [streamerId], references: [id], onDelete: Cascade)
-
-  gameId String
-  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([gameId])
-  @@index([streamerId])
+  @@index([createdAt])
+  @@index([likes])
 }
 
-enum Status {
-  PLANNING
-  PLAYING
-  COMPLETED
-  DROPPED
+model GameList {
+  id          String     @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  type        ListType   @default(CUSTOM)
+  isPublic    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       GameListItem[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model GameListItem {
+  id       String @id @default(uuid())
+  listId   String
+  gameId   String
+  position Int
+  note     String?
+
+  list     GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  game     Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, gameId])
+  @@index([position])
+}
+
+model Follow {
+  followerId   String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower     User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+model Stream {
+  id            String          @id @default(uuid())
+  userId        String
+  gameId        String
+  sessionId     String?
+
+  platform      StreamPlatform
+  streamUrl     String
+  title         String?
+  isLive        Boolean         @default(false)
+
+  startedAt     DateTime
+  endedAt       DateTime?
+  createdAt     DateTime        @default(now())
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game          Game            @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  session       PlaySession?    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([platform])
+  @@index([startedAt])
+}
+
+model Activity {
+  id          String        @id @default(uuid())
+  userId      String
+  gameId      String?
+  type        ActivityType
+  entityId    String?
+  metadata    Json?
+  createdAt  DateTime      @default(now())
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game        Game?         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([type])
 }

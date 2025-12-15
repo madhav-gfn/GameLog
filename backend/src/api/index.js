@@ -1,8 +1,15 @@
-const express = require('express');
+import express from 'express';
+import gamesRouter from '../Routers/gamesRouter.js';
+import userRoutes from '../routes/userRoutes.js';
+import commentRoutes from '../routes/commentRoutes.js';
+import authRoutes from '../routes/authRoutes.js';
 
 const router = express.Router();
 
-// API routes will be imported here
-// Example: router.use('/games', gamesRoutes);
+// Register routes
+router.use('/auth', authRoutes);
+router.use('/games', gamesRouter);
+router.use('/users', userRoutes);
+router.use('/comments', commentRoutes);
 
-module.exports = router;
+export { router as apiRoutes };
