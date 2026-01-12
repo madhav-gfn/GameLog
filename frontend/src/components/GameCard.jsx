@@ -20,7 +20,7 @@ export const GameCard = ({ game, onClick, compact = false }) => {
       >
         <div className="relative overflow-hidden aspect-video bg-gray-900">
           <img
-            src={game.cover}
+            src={game.coverImage}
             alt={game.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />
@@ -43,7 +43,7 @@ export const GameCard = ({ game, onClick, compact = false }) => {
       {/* Card Image */}
       <div className="relative overflow-hidden aspect-video bg-gray-900">
         <img
-          src={game.cover}
+          src={game.coverImage}
           alt={game.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
