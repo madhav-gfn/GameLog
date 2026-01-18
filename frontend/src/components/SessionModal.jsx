@@ -1,45 +1,43 @@
 import React, { useState } from 'react';
-import { useStore } from '../store/gameStore';
-import { MOCK_PLAY_SESSIONS } from '../data/mockData';
 
 export const SessionModal = ({ game, isOpen, onClose }) => {
-  const { addPlaySession } = useStore();
   const [hours, setHours] = useState(1);
   const [minutes, setMinutes] = useState(0);
   const [platform, setPlatform] = useState('PC');
   const [notes, setNotes] = useState('');
-  const [streamed, setStreamed] = useState(false);
-  const [streamPlatform, setStreamPlatform] = useState('Twitch');
-  const [streamLink, setStreamLink] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const duration = hours * 60 + minutes;
 
-    const newSession = {
-      id: Math.random().toString(),
-      duration,
-      platform,
-      date: new Date(),
-      notes,
-      streamed,
-      ...(streamed && {
-        streamPlatform,
-        streamLink,
-      }),
-    };
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/games/${game.id}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          duration,
+          platform,
+          notes,
+          date: new Date(),
+        }),
+      });
 
-    addPlaySession(newSession);
-    onClose();
-
-    // Reset form
-    setHours(1);
-    setMinutes(0);
-    setPlatform('PC');
-    setNotes('');
-    setStreamed(false);
-    setStreamPlatform('Twitch');
-    setStreamLink('');
+      if (response.ok) {
+        onClose();
+        // Reset form
+        setHours(1);
+        setMinutes(0);
+        setPlatform('PC');
+        setNotes('');
+      }
+    } catch (err) {
+      console.error('Failed to log session:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -140,54 +138,6 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
             />
           </div>
 
-          {/* Streamed */}
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={streamed}
-                onChange={(e) => setStreamed(e.target.checked)}
-                className="w-4 h-4 cursor-pointer"
-              />
-              <span className="text-sm font-bold text-gray-300">
-                This was a streaming session
-              </span>
-            </label>
-          </div>
-
-          {/* Stream Details */}
-          {streamed && (
-            <>
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2">
-                  Stream Platform
-                </label>
-                <select
-                  value={streamPlatform}
-                  onChange={(e) => setStreamPlatform(e.target.value)}
-                  className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-magenta/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-magenta"
-                >
-                  <option>Twitch</option>
-                  <option>YouTube</option>
-                  <option>Kick</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2">
-                  Stream/VOD Link
-                </label>
-                <input
-                  type="url"
-                  value={streamLink}
-                  onChange={(e) => setStreamLink(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-magenta/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-magenta text-sm"
-                />
-              </div>
-            </>
-          )}
-
           {/* Actions */}
           <div className="flex gap-3 pt-4">
             <button
@@ -199,9 +149,10 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-retro-neon-green hover:bg-retro-neon-green/80 text-black font-bold rounded transition"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-retro-neon-green hover:bg-retro-neon-green/80 text-black font-bold rounded transition disabled:opacity-50"
             >
-              Log Session
+              {loading ? 'Logging...' : 'Log Session'}
             </button>
           </div>
         </form>

@@ -1,26 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Header, EmptyState } from '../components/Layout';
+import { Header, EmptyState, LoadingSkeleton } from '../components/Layout';
 import { RatingStars } from '../components/RatingStars';
 import { StatusBadge } from '../components/StatusBadge';
 import { SessionModal } from '../components/SessionModal';
-import { useStore } from '../store/gameStore';
-import { MOCK_GAMES, MOCK_USER_GAMES } from '../data/mockData';
+import { gameApi } from '../api/gameApi';
+import { useAuth } from '../contexts/AuthContext';
 
 export const GameDetail = () => {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { userGames, updateUserGame, isInWishlist, toggleWishlist } = useStore();
+  const { user } = useAuth();
+  const [game, setGame] = useState(null);
+  const [userGame, setUserGame] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('BACKLOG');
   const [rating, setRating] = useState(null);
   const [review, setReview] = useState('');
 
-  const game = MOCK_GAMES.find((g) => g.id === gameId);
-  const userGame = userGames.find((ug) => ug.gameId === gameId);
-  const inWishlist = isInWishlist(gameId);
+  useEffect(() => {
+    const fetchGameDetail = async () => {
+      try {
+        setLoading(true);
+        const gameData = await gameApi.getGameDetail(gameId);
+        setGame(gameData);
 
-  if (!game) {
+        if (user && user.id) {
+          const libraryResponse = await fetch(`http://localhost:5000/api/users/${user.id}/library`, {
+            credentials: 'include',
+          });
+          if (libraryResponse.ok) {
+            const libraryData = await libraryResponse.json();
+            const userGameData = libraryData.find((g) => g.gameId === gameId);
+            setUserGame(userGameData || null);
+          }
+        }
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch game detail:', err);
+        setError('Failed to load game details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGameDetail();
+  }, [gameId, user]);
+
+  const handleAddToLibrary = async () => {
+    if (!userGame && user && user.id) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/games/${gameId}/library`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: selectedStatus }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserGame(data);
+        }
+      } catch (err) {
+        console.error('Failed to add to library:', err);
+      }
+    }
+  };
+
+  const handleStatusChange = async (status) => {
+    setSelectedStatus(status);
+    if (userGame) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/games/${gameId}/library`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserGame(data);
+        }
+      } catch (err) {
+        console.error('Failed to update status:', err);
+      }
+    }
+  };
+
+  const handleSaveReview = async () => {
+    if (userGame) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/games/${gameId}/library`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ rating, review }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserGame(data);
+        }
+      } catch (err) {
+        console.error('Failed to save review:', err);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Loading..." />
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
+  if (error || !game) {
     return (
       <div>
         <Header title="Game Not Found" />
@@ -34,41 +130,10 @@ export const GameDetail = () => {
     );
   }
 
-  const handleAddToLibrary = () => {
-    if (!userGame) {
-      const newUserGame = {
-        id: Math.random().toString(),
-        gameId,
-        userId: '1',
-        status: selectedStatus,
-        rating: null,
-        review: '',
-        startedAt: null,
-        completedAt: null,
-        totalHours: 0,
-        sessions: 0,
-      };
-      updateUserGame(newUserGame.id, newUserGame);
-    }
-  };
-
-  const handleStatusChange = (status) => {
-    setSelectedStatus(status);
-    if (userGame) {
-      updateUserGame(userGame.id, { status });
-    }
-  };
-
-  const handleSaveReview = () => {
-    if (userGame) {
-      updateUserGame(userGame.id, { rating, review });
-    }
-  };
-
   return (
     <div>
       {/* Hero Section */}
-      <div className="mb-8 -mx-6 -mt-6 mb-8">
+      <div className="mb-8 -mx-6 -mt-6">
         <div className="relative h-80 bg-gradient-to-b from-retro-neon-blue/20 to-retro-dark overflow-hidden">
           <img
             src={game.cover}
@@ -110,7 +175,7 @@ export const GameDetail = () => {
                 Genres
               </h3>
               <div className="flex flex-wrap gap-2">
-                {game.genres.map((genre) => (
+                {game.genres && game.genres.map((genre) => (
                   <span
                     key={genre}
                     className="px-3 py-1 bg-retro-neon-magenta/20 text-retro-neon-magenta rounded text-xs"
@@ -126,7 +191,7 @@ export const GameDetail = () => {
                 Platforms
               </h3>
               <div className="flex flex-wrap gap-2">
-                {game.platforms.map((platform) => (
+                {game.platforms && game.platforms.map((platform) => (
                   <span
                     key={platform}
                     className="px-3 py-1 bg-retro-neon-blue/20 text-retro-neon-blue rounded text-xs"
@@ -234,18 +299,6 @@ export const GameDetail = () => {
               ⏱️ Log Session
             </button>
           )}
-
-          {/* Wishlist Button */}
-          <button
-            onClick={() => toggleWishlist(gameId)}
-            className={`w-full px-4 py-3 font-bold rounded transition ${
-              inWishlist
-                ? 'bg-retro-neon-magenta hover:bg-retro-neon-magenta/80 text-black'
-                : 'bg-retro-dark border border-retro-neon-magenta/50 text-retro-neon-magenta hover:border-retro-neon-magenta'
-            }`}
-          >
-            {inWishlist ? '❤️ In Wishlist' : '🤍 Add to Wishlist'}
-          </button>
         </div>
       </div>
 

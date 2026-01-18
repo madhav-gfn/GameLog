@@ -1,21 +1,83 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header } from '../components/Layout';
+import { Header, LoadingSkeleton } from '../components/Layout';
 import { GameCard } from '../components/GameCard';
-import { useStore } from '../store/gameStore';
-import { MOCK_GAMES } from '../data/mockData';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Profile = () => {
   const navigate = useNavigate();
-  const { currentUser, userGames } = useStore();
+  const { user } = useAuth();
+  const [userLibrary, setUserLibrary] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const recentGames = userGames
-    .slice(-4)
-    .reverse()
-    .map((ug) => MOCK_GAMES.find((g) => g.id === ug.gameId))
-    .filter(Boolean);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user || !user.id) {
+        setLoading(false);
+        return;
+      }
 
-  const totalHours = userGames.reduce((sum, ug) => sum + ug.totalHours, 0);
+      try {
+        setLoading(true);
+        const libraryResponse = await fetch(`http://localhost:5000/api/users/${user.id}/library`, {
+          credentials: 'include',
+        });
+        if (!libraryResponse.ok) throw new Error('Failed to fetch library');
+        const libraryData = await libraryResponse.json();
+        // Backend returns { games: [], pagination: {} }
+        const games = libraryData.games || libraryData || [];
+        setUserLibrary(games);
+
+        // If backend provides profile data, use it; otherwise use auth user
+        setUserProfile({
+          username: user.username || 'Player',
+          avatar: user.avatar || '👾',
+          bio: user.bio || 'No bio yet',
+          followers: user.followers || 0,
+          following: user.following || 0,
+          favoriteGenres: user.favoriteGenres || [],
+        });
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch user data:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Profile" subtitle="Your gaming profile" />
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
+  if (error || !userProfile) {
+    return (
+      <div>
+        <Header title="Profile" subtitle="Your gaming profile" />
+        <div className="text-center py-12 text-gray-400">
+          {error || 'Unable to load profile'}
+        </div>
+      </div>
+    );
+  }
+
+  const recentGames = Array.isArray(userLibrary)
+    ? userLibrary.slice(-4).reverse()
+    : [];
+
+  const totalHours = Array.isArray(userLibrary)
+    ? userLibrary.reduce((sum, g) => sum + (g.totalHours || 0), 0)
+    : 0;
 
   return (
     <div>
@@ -23,22 +85,22 @@ export const Profile = () => {
       <div className="bg-gradient-to-r from-retro-neon-blue/20 to-retro-neon-magenta/20 border border-retro-neon-blue/30 rounded-lg p-8 mb-8">
         <div className="flex items-start justify-between">
           <div className="flex gap-6">
-            <div className="text-7xl">{currentUser.avatar}</div>
+            <div className="text-7xl">{userProfile.avatar}</div>
             <div>
               <h1 className="text-3xl font-bold text-retro-neon-green font-pixel mb-2">
-                {currentUser.username}
+                {userProfile.username}
               </h1>
-              <p className="text-gray-400 mb-4">{currentUser.bio}</p>
+              <p className="text-gray-400 mb-4">{userProfile.bio}</p>
               <div className="flex gap-6 text-sm">
                 <div>
                   <span className="font-bold text-retro-neon-blue">
-                    {currentUser.followers}
+                    {userProfile.followers}
                   </span>
                   <span className="text-gray-400 ml-2">followers</span>
                 </div>
                 <div>
                   <span className="font-bold text-retro-neon-magenta">
-                    {currentUser.following}
+                    {userProfile.following}
                   </span>
                   <span className="text-gray-400 ml-2">following</span>
                 </div>
@@ -59,35 +121,39 @@ export const Profile = () => {
 
         <div className="bg-retro-purple border border-retro-neon-blue/30 rounded-lg p-4 text-center">
           <div className="text-3xl font-bold text-retro-neon-blue font-mono">
-            {userGames.length}
+            {Array.isArray(userLibrary) ? userLibrary.length : 0}
           </div>
           <div className="text-xs text-gray-400 mt-1">Games Tracked</div>
         </div>
 
         <div className="bg-retro-purple border border-retro-neon-magenta/30 rounded-lg p-4 text-center">
           <div className="text-3xl font-bold text-retro-neon-magenta font-mono">
-            {userGames.filter((ug) => ug.status === 'COMPLETED').length}
+            {Array.isArray(userLibrary)
+              ? userLibrary.filter((g) => g.status === 'COMPLETED').length
+              : 0}
           </div>
           <div className="text-xs text-gray-400 mt-1">Completed</div>
         </div>
       </div>
 
       {/* Favorite Genres */}
-      <div className="bg-retro-purple border border-retro-neon-yellow/30 rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-bold text-retro-neon-yellow mb-4">
-          Favorite Genres
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {currentUser.favoriteGenres.map((genre) => (
-            <span
-              key={genre}
-              className="px-4 py-2 bg-retro-neon-yellow/20 text-retro-neon-yellow rounded-lg font-bold text-sm"
-            >
-              {genre}
-            </span>
-          ))}
+      {userProfile.favoriteGenres.length > 0 && (
+        <div className="bg-retro-purple border border-retro-neon-yellow/30 rounded-lg p-6 mb-8">
+          <h2 className="text-lg font-bold text-retro-neon-yellow mb-4">
+            Favorite Genres
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {userProfile.favoriteGenres.map((genre) => (
+              <span
+                key={genre}
+                className="px-4 py-2 bg-retro-neon-yellow/20 text-retro-neon-yellow rounded-lg font-bold text-sm"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recently Played */}
       <div>

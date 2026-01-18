@@ -29,4 +29,22 @@ export const gameApi = {
     if (!response.ok) throw new Error('Failed to fetch platforms');
     return response.json();
   },
+
+  // Fetch user activity
+  async getUserActivity(userId) {
+    const response = await fetch(`${API_URL}/users/${userId}/activity`, {
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch user activity');
+    return response.json();
+  },
+
+  // Fetch game details
+  async getGameDetail(gameId) {
+    const response = await fetch(`${API_URL}/games/${gameId}`, {
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch game details');
+    return response.json();
+  },
 };

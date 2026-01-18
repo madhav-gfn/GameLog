@@ -1,4 +1,5 @@
 import React from 'react';
+import { LoadingSkeleton } from './LoadingSkeleton';
 
 export const Header = ({ title, subtitle }) => {
   return (
@@ -20,3 +21,5 @@ export const EmptyState = ({ icon, title, description }) => {
     </div>
   );
 };
+
+export { LoadingSkeleton };
