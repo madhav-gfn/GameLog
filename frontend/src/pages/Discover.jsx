@@ -75,7 +75,7 @@ export const Discover = () => {
       />
 
       {error && (
-        <div className="mb-6 p-4 bg-red-900/20 border border-red-500/50 rounded text-red-400">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
           {error}
         </div>
       )}
@@ -83,13 +83,13 @@ export const Discover = () => {
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div>
-          <label className="block text-sm font-bold text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
             Genre
           </label>
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
-            className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
             disabled={loading || genres.length === 0}
           >
             <option value="">All Genres</option>
@@ -102,13 +102,13 @@ export const Discover = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
             Platform
           </label>
           <select
             value={selectedPlatform}
             onChange={(e) => setSelectedPlatform(e.target.value)}
-            className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
             disabled={loading || platforms.length === 0}
           >
             <option value="">All Platforms</option>
@@ -121,13 +121,13 @@ export const Discover = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-300 mb-2">
+          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
             Sort by
           </label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
             disabled={loading}
           >
             <option value="rating">Rating</option>
@@ -156,7 +156,7 @@ export const Discover = () => {
 
           {games.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-400 text-lg">No games found with those filters.</p>
+              <p className="text-light-text-tertiary dark:text-dark-text-tertiary text-lg">No games found with those filters.</p>
             </div>
           )}
         </>

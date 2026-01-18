@@ -6,6 +6,7 @@ import session from 'express-session';
 import passport from 'passport';
 import prisma from './config/database.js';
 import './config/passport.js';
+import { apiRoutes } from './api/index.js';
 
 const app = express();
 
@@ -34,7 +35,7 @@ prisma.$connect()
   .catch((error) => console.error('Database connection failed:', error));
 
 // Routes
-import { apiRoutes } from './api/index.js';
+
 app.use('/api', apiRoutes);
 
 // Health check

@@ -4,27 +4,72 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        'retro-dark': '#0a0e27',
-        'retro-purple': '#1a1a3e',
-        'retro-neon-green': '#00ff41',
-        'retro-neon-blue': '#00d4ff',
-        'retro-neon-magenta': '#ff006e',
-        'retro-neon-yellow': '#ffbe0b',
+        // Light mode colors
+        light: {
+          bg: {
+            primary: '#FFE2AF', // Peach
+            secondary: '#79C9C5', // Teal
+            card: '#FFFFFF',
+            hover: '#3F9AAE', // Teal-blue
+          },
+          text: {
+            primary: '#2C2C2C', // Charcoal
+            secondary: '#5A5A5A',
+            tertiary: '#8A8A8A',
+            accent: '#3F9AAE', // Teal-blue
+          },
+          border: {
+            default: '#79C9C5', // Teal
+            hover: '#3F9AAE', // Teal-blue
+            accent: '#F96E5B', // Coral
+          },
+          accent: {
+            primary: '#3F9AAE', // Teal-blue
+            secondary: '#79C9C5', // Teal
+            tertiary: '#FFE2AF', // Peach
+            quaternary: '#F96E5B', // Coral
+          },
+        },
+        // Dark mode colors
+        dark: {
+          bg: {
+            primary: '#0C2C55', // Dark blue
+            secondary: '#296374', // Blue-grey
+            card: '#296374', // Blue-grey
+            hover: '#629FAD', // Light blue
+          },
+          text: {
+            primary: '#EDEDCE', // Cream
+            secondary: '#EDEDCE', // Cream
+            tertiary: '#629FAD', // Light blue
+            accent: '#EDEDCE', // Cream
+          },
+          border: {
+            default: '#296374', // Blue-grey
+            hover: '#629FAD', // Light blue
+            accent: '#629FAD', // Light blue
+          },
+          accent: {
+            primary: '#629FAD', // Light blue
+            secondary: '#296374', // Blue-grey
+            tertiary: '#EDEDCE', // Cream
+            quaternary: '#0C2C55', // Dark blue
+          },
+        },
       },
       fontFamily: {
-        'pixel': ['Press Start 2P', 'cursive'],
-        'mono': ['IBM Plex Mono', 'monospace'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['Inter', 'sans-serif'],
       },
       boxShadow: {
-        'neon-green': '0 0 10px rgba(0, 255, 65, 0.5)',
-        'neon-blue': '0 0 10px rgba(0, 212, 255, 0.5)',
-        'neon-magenta': '0 0 10px rgba(255, 0, 110, 0.5)',
-      },
-      backdropFilter: {
-        'glass': 'backdrop-filter: blur(10px)',
+        'card': '0 2px 8px rgba(0, 0, 0, 0.08)',
+        'card-hover': '0 4px 16px rgba(0, 0, 0, 0.12)',
+        'card-dark': '0 2px 8px rgba(0, 0, 0, 0.3)',
+        'card-hover-dark': '0 4px 16px rgba(0, 0, 0, 0.4)',
       },
     },
   },

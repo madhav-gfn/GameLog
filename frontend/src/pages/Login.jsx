@@ -6,18 +6,18 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-retro-dark via-retro-purple to-retro-dark flex items-center justify-center">
-      <div className="bg-retro-purple border-2 border-retro-neon-green rounded-lg p-8 max-w-md w-full mx-4 shadow-lg shadow-retro-neon-green/20">
+    <div className="min-h-screen bg-light-bg-primary dark:bg-dark-bg-primary flex items-center justify-center px-4">
+      <div className="card p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-retro-neon-green font-pixel mb-2">
-            🎮 GAMELOG
+          <h1 className="text-4xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+            GameFolio
           </h1>
-          <p className="text-gray-400">Track your gaming journey</p>
+          <p className="text-light-text-secondary dark:text-dark-text-secondary">Your Cozy Corner for Gaming Culture</p>
         </div>
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-3 shadow-lg"
+          className="w-full bg-white dark:bg-dark-bg-card hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover text-light-text-primary dark:text-dark-text-primary font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-3 shadow-card dark:shadow-card-dark border border-light-border-default dark:border-dark-border-default"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -28,7 +28,7 @@ export const Login = () => {
           Continue with Google
         </button>
 
-        <div className="mt-6 text-center text-xs text-gray-500">
+        <div className="mt-6 text-center text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
           By continuing, you agree to our Terms of Service
         </div>
       </div>

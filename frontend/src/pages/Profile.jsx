@@ -21,24 +21,55 @@ export const Profile = () => {
 
       try {
         setLoading(true);
+        
+        // Fetch library data
         const libraryResponse = await fetch(`http://localhost:5000/api/users/${user.id}/library`, {
           credentials: 'include',
         });
         if (!libraryResponse.ok) throw new Error('Failed to fetch library');
         const libraryData = await libraryResponse.json();
-        // Backend returns { games: [], pagination: {} }
-        const games = libraryData.games || libraryData || [];
-        setUserLibrary(games);
+        // Backend returns { games: [UserGame objects with nested game], pagination: {} }
+        const userGames = libraryData.games || [];
+        setUserLibrary(userGames);
 
-        // If backend provides profile data, use it; otherwise use auth user
-        setUserProfile({
-          username: user.username || 'Player',
-          avatar: user.avatar || '👾',
-          bio: user.bio || 'No bio yet',
-          followers: user.followers || 0,
-          following: user.following || 0,
-          favoriteGenres: user.favoriteGenres || [],
-        });
+        // Fetch full user profile with stats
+        try {
+          const profileResponse = await fetch(`http://localhost:5000/api/users/${user.id}`, {
+            credentials: 'include',
+          });
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            setUserProfile({
+              username: profileData.username || profileData.displayName || user.email?.split('@')[0] || 'Player',
+              avatar: profileData.avatar || user.avatar || '👾',
+              bio: profileData.bio || 'No bio yet',
+              followers: profileData._count?.followers || 0,
+              following: profileData._count?.following || 0,
+              favoriteGenres: profileData.favoriteGenres || [],
+            });
+          } else {
+            // Fallback to auth user data
+            setUserProfile({
+              username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
+              avatar: user.avatar || '👾',
+              bio: user.bio || 'No bio yet',
+              followers: 0,
+              following: 0,
+              favoriteGenres: [],
+            });
+          }
+        } catch (profileError) {
+          // Fallback to auth user data
+          setUserProfile({
+            username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
+            avatar: user.avatar || '👾',
+            bio: user.bio || 'No bio yet',
+            followers: 0,
+            following: 0,
+            favoriteGenres: [],
+          });
+        }
+        
         setError(null);
       } catch (err) {
         console.error('Failed to fetch user data:', err);
@@ -71,38 +102,72 @@ export const Profile = () => {
     );
   }
 
-  const recentGames = Array.isArray(userLibrary)
-    ? userLibrary.slice(-4).reverse()
+  // Transform UserGame objects to include game data at top level for easier access
+  const transformedLibrary = Array.isArray(userLibrary)
+    ? userLibrary.map((userGame) => ({
+        ...userGame.game,
+        id: userGame.gameId, // Use gameId for navigation
+        rawgId: userGame.game?.rawgId || userGame.gameId, // Fallback to gameId if rawgId not available
+        status: userGame.status,
+        rating: userGame.rating,
+        review: userGame.review,
+        totalHours: userGame.totalHours || 0,
+        sessions: userGame.playCount || 0,
+        updatedAt: userGame.updatedAt,
+      }))
     : [];
 
-  const totalHours = Array.isArray(userLibrary)
-    ? userLibrary.reduce((sum, g) => sum + (g.totalHours || 0), 0)
-    : 0;
+  const recentGames = transformedLibrary
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, 4);
+
+  const totalHours = transformedLibrary.reduce((sum, g) => sum + (g.totalHours || 0), 0);
 
   return (
     <div>
       {/* Profile Header */}
-      <div className="bg-gradient-to-r from-retro-neon-blue/20 to-retro-neon-magenta/20 border border-retro-neon-blue/30 rounded-lg p-8 mb-8">
+      <div className="card p-8 mb-8">
         <div className="flex items-start justify-between">
           <div className="flex gap-6">
-            <div className="text-7xl">{userProfile.avatar}</div>
+            <div className="flex-shrink-0">
+              {userProfile.avatar && userProfile.avatar.startsWith('http') ? (
+                <img
+                  src={userProfile.avatar}
+                  alt={userProfile.username}
+                  className="w-24 h-24 rounded-full object-cover border-2 border-light-border-default dark:border-dark-border-default"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-light-accent-primary dark:bg-dark-accent-primary text-white border-2 border-light-border-default dark:border-dark-border-default ${
+                  userProfile.avatar && userProfile.avatar.startsWith('http') ? 'hidden' : ''
+                }`}
+              >
+                {userProfile.avatar && !userProfile.avatar.startsWith('http') 
+                  ? userProfile.avatar 
+                  : userProfile.username?.[0]?.toUpperCase() || 'U'}
+              </div>
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-retro-neon-green font-pixel mb-2">
+              <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
                 {userProfile.username}
               </h1>
-              <p className="text-gray-400 mb-4">{userProfile.bio}</p>
+              <p className="text-light-text-secondary dark:text-dark-text-secondary mb-4">{userProfile.bio}</p>
               <div className="flex gap-6 text-sm">
                 <div>
-                  <span className="font-bold text-retro-neon-blue">
+                  <span className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">
                     {userProfile.followers}
                   </span>
-                  <span className="text-gray-400 ml-2">followers</span>
+                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary ml-2">followers</span>
                 </div>
                 <div>
-                  <span className="font-bold text-retro-neon-magenta">
+                  <span className="font-semibold text-light-accent-secondary dark:text-dark-accent-secondary">
                     {userProfile.following}
                   </span>
-                  <span className="text-gray-400 ml-2">following</span>
+                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary ml-2">following</span>
                 </div>
               </div>
             </div>
@@ -112,41 +177,39 @@ export const Profile = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-12">
-        <div className="bg-retro-purple border border-retro-neon-green/30 rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold text-retro-neon-green font-mono">
+        <div className="card p-4 text-center">
+          <div className="text-3xl font-bold text-light-accent-secondary dark:text-dark-accent-secondary">
             {totalHours}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Total Hours</div>
+          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Total Hours</div>
         </div>
 
-        <div className="bg-retro-purple border border-retro-neon-blue/30 rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold text-retro-neon-blue font-mono">
-            {Array.isArray(userLibrary) ? userLibrary.length : 0}
+        <div className="card p-4 text-center">
+          <div className="text-3xl font-bold text-light-accent-primary dark:text-dark-accent-primary">
+            {transformedLibrary.length}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Games Tracked</div>
+          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Games Tracked</div>
         </div>
 
-        <div className="bg-retro-purple border border-retro-neon-magenta/30 rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold text-retro-neon-magenta font-mono">
-            {Array.isArray(userLibrary)
-              ? userLibrary.filter((g) => g.status === 'COMPLETED').length
-              : 0}
+        <div className="card p-4 text-center">
+          <div className="text-3xl font-bold text-light-accent-tertiary dark:text-dark-accent-tertiary">
+            {transformedLibrary.filter((g) => g.status === 'COMPLETED').length}
           </div>
-          <div className="text-xs text-gray-400 mt-1">Completed</div>
+          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Completed</div>
         </div>
       </div>
 
       {/* Favorite Genres */}
       {userProfile.favoriteGenres.length > 0 && (
-        <div className="bg-retro-purple border border-retro-neon-yellow/30 rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-bold text-retro-neon-yellow mb-4">
+        <div className="card p-6 mb-8">
+          <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
             Favorite Genres
           </h2>
           <div className="flex flex-wrap gap-2">
             {userProfile.favoriteGenres.map((genre) => (
               <span
                 key={genre}
-                className="px-4 py-2 bg-retro-neon-yellow/20 text-retro-neon-yellow rounded-lg font-bold text-sm"
+                className="px-4 py-2 bg-light-accent-secondary/10 dark:bg-dark-accent-secondary/20 text-light-accent-secondary dark:text-dark-accent-secondary rounded-lg font-semibold text-sm"
               >
                 {genre}
               </span>
@@ -157,22 +220,22 @@ export const Profile = () => {
 
       {/* Recently Played */}
       <div>
-        <h2 className="text-2xl font-bold text-retro-neon-green mb-6">
+        <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-6">
           Recently Played
         </h2>
         {recentGames.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {recentGames.map((game) => (
               <GameCard
-                key={game.id}
+                key={game.id || game.rawgId}
                 game={game}
                 compact
-                onClick={() => navigate(`/game/${game.id}`)}
+                onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
               />
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
             No games played yet. Start tracking your games!
           </div>
         )}

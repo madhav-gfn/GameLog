@@ -94,15 +94,15 @@ export const Library = () => {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-2 rounded font-bold whitespace-nowrap transition ${
+            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
               activeTab === tab.value
-                ? 'bg-retro-neon-green text-black'
-                : 'bg-retro-purple border border-retro-neon-green/30 text-gray-300 hover:border-retro-neon-green'
+                ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
+                : 'bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover'
             }`}
           >
             {tab.label}
@@ -116,14 +116,17 @@ export const Library = () => {
           {gamesInTab.map((game) => (
             <div
               key={game.id}
-              className="flex gap-4 bg-retro-purple border border-retro-neon-blue/30 rounded-lg p-4 hover:border-retro-neon-blue/60 transition"
+              className="flex gap-4 card card-hover p-4"
             >
               {/* Cover */}
-              <div className="w-24 h-32 flex-shrink-0 rounded overflow-hidden">
+              <div className="w-24 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-light-bg-secondary dark:bg-dark-bg-secondary">
                 <img
-                  src={game.cover}
+                  src={game.cover || game.coverImage}
                   alt={game.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="128"%3E%3Crect fill="%23E5E5E5" width="96" height="128"/%3E%3C/svg%3E';
+                  }}
                 />
               </div>
 
@@ -131,25 +134,29 @@ export const Library = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-bold text-retro-neon-green text-lg">
+                    <h3 className="font-bold text-light-text-primary dark:text-dark-text-primary text-lg">
                       {game.title}
                     </h3>
-                    <p className="text-sm text-gray-400">{game.releaseYear}</p>
+                    {game.releaseYear && (
+                      <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">{game.releaseYear}</p>
+                    )}
                   </div>
                   {game.status && (
                     <StatusBadge status={game.status} />
                   )}
                 </div>
 
-                <p className="text-sm text-gray-300 mb-3 line-clamp-2">
-                  {game.description}
-                </p>
+                {game.description && (
+                  <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-3 line-clamp-2">
+                    {game.description}
+                  </p>
+                )}
 
                 {/* Stats */}
                 {game && (
-                  <div className="flex gap-4 text-xs text-gray-400 font-mono">
-                    <span>⏱️ {game.totalHours}h</span>
-                    <span>📊 {game.sessions} sessions</span>
+                  <div className="flex gap-4 text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                    <span>⏱️ {game.totalHours || 0}h</span>
+                    <span>📊 {game.sessions || 0} sessions</span>
                     {game.rating && (
                       <span>⭐ {game.rating}/5</span>
                     )}

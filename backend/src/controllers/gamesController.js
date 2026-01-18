@@ -27,28 +27,98 @@ export async function getGameDetails(req, res) {
   try {
     const { id } = req.params;
     
-    const game = await prisma.game.findUnique({
-      where: { id },
-      include: {
-        comments: {
-          include: { user: { select: { username: true, avatar: true } } },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-        _count: {
-          select: {
-            users: true,
-            comments: true,
+    // Check if id is a UUID (database ID) or a number (RAWG ID)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    let game;
+    
+    if (isUUID) {
+      // Look up by database UUID
+      game = await prisma.game.findUnique({
+        where: { id },
+        include: {
+          comments: {
+            include: { user: { select: { username: true, avatar: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+          _count: {
+            select: {
+              users: true,
+              comments: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Treat as RAWG ID - first try to find in database
+      const rawgId = parseInt(id);
+      if (isNaN(rawgId)) {
+        return res.status(400).json({ error: 'Invalid game ID format' });
+      }
+      
+      game = await prisma.game.findUnique({
+        where: { rawgId },
+        include: {
+          comments: {
+            include: { user: { select: { username: true, avatar: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+          _count: {
+            select: {
+              users: true,
+              comments: true,
+            },
+          },
+        },
+      });
+      
+      // If not found in database, fetch from RAWG and create it
+      if (!game) {
+        try {
+          game = await getOrCreateGame(rawgId);
+          
+          // Fetch again with includes
+          game = await prisma.game.findUnique({
+            where: { id: game.id },
+            include: {
+              comments: {
+                include: { user: { select: { username: true, avatar: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+              },
+              _count: {
+                select: {
+                  users: true,
+                  comments: true,
+                },
+              },
+            },
+          });
+        } catch (rawgError) {
+          console.error('Error fetching from RAWG:', rawgError);
+          return res.status(404).json({ error: 'Game not found' });
+        }
+      }
+    }
 
     if (!game) {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    res.json(game);
+    // Transform the game data to match frontend expectations
+    const gameData = {
+      ...game,
+      id: game.id,
+      cover: game.coverImage,
+      coverImage: game.coverImage,
+      releaseYear: game.releaseDate ? new Date(game.releaseDate).getFullYear() : null,
+      averageRating: game.avgRating,
+      ratingCount: game.ratingCount,
+    };
+
+    res.json(gameData);
   } catch (error) {
     console.error('Error in getGameDetails controller:', error);
     res.status(500).json({ error: 'Failed to fetch game details' });

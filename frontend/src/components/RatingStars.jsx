@@ -25,8 +25,8 @@ export const RatingStars = ({ rating, onRate, interactive = false, size = 'md' }
           <span
             className={`text-2xl ${
               (hoverRating || rating) >= star
-                ? 'text-retro-neon-yellow'
-                : 'text-gray-600'
+                ? 'text-yellow-500 dark:text-yellow-400'
+                : 'text-light-border-default dark:text-dark-border-default'
             } transition`}
           >
             ★
@@ -34,7 +34,7 @@ export const RatingStars = ({ rating, onRate, interactive = false, size = 'md' }
         </button>
       ))}
       {rating && (
-        <span className="ml-2 text-sm font-mono text-gray-400">
+        <span className="ml-2 text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
           {rating.toFixed(1)}
         </span>
       )}

@@ -30,7 +30,7 @@ export const FeedItem = ({ activity }) => {
   };
 
   return (
-    <div className="bg-retro-purple border border-retro-neon-green/30 rounded-lg p-4 hover:border-retro-neon-green/60 hover:shadow-neon-green/50 transition-all duration-300">
+    <div className="card card-hover p-4 border border-light-border-default dark:border-dark-border-default">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="text-3xl flex-shrink-0">{activity.avatar}</div>
@@ -38,24 +38,24 @@ export const FeedItem = ({ activity }) => {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-bold text-retro-neon-blue text-sm">
+            <span className="font-semibold text-light-accent-primary dark:text-dark-accent-primary text-sm">
               {activity.username}
             </span>
-            <span className="text-retro-neon-yellow">{getActivityIcon(activity.type)}</span>
-            <span className="text-xs text-gray-400 ml-auto">
+            <span className="text-yellow-500 dark:text-yellow-400">{getActivityIcon(activity.type)}</span>
+            <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary ml-auto">
               {formatTime(activity.timestamp)}
             </span>
           </div>
 
-          <p className="text-sm text-gray-300 mb-2">
-            <span className="text-retro-neon-magenta font-semibold">{activity.gameName}</span>
+          <p className="text-sm text-light-text-primary dark:text-dark-text-primary mb-2">
+            <span className="text-light-accent-secondary dark:text-dark-accent-secondary font-semibold">{activity.gameName}</span>
             {' '}
-            <span className="text-gray-400">{activity.description}</span>
+            <span className="text-light-text-secondary dark:text-dark-text-secondary">{activity.description}</span>
           </p>
 
           {/* Session Details */}
           {activity.type === 'SESSION' && activity.duration && (
-            <div className="text-xs text-gray-400 font-mono mb-2">
+            <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mb-2">
               ⏱️ {Math.floor(activity.duration / 60)}h {activity.duration % 60}m
             </div>
           )}

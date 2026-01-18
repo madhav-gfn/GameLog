@@ -6,3 +6,8 @@ export { FeedItem } from './FeedItem';
 export { SessionModal } from './SessionModal';
 export { LoadingSkeleton } from './LoadingSkeleton';
 export { Header, EmptyState } from './Layout';
+export { Navigation } from './Navigation';
+export { SearchBar } from './SearchBar';
+export { TrendingCarousel } from './TrendingCarousel';
+export { TopRated } from './TopRated';
+export { ThemeToggle } from './ThemeToggle';

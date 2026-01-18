@@ -51,30 +51,30 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
       />
 
       {/* Modal */}
-      <div className="relative bg-retro-purple border-2 border-retro-neon-green rounded-lg p-6 max-w-md w-full mx-4 shadow-lg shadow-retro-neon-green/50">
+      <div className="relative card p-6 max-w-md w-full mx-4 shadow-card-hover dark:shadow-card-hover-dark">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-retro-neon-green font-pixel">
+          <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
             Log Session
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-retro-neon-magenta transition text-2xl"
+            className="text-light-text-tertiary dark:text-dark-text-tertiary hover:text-light-text-primary dark:hover:text-dark-text-primary transition text-2xl"
           >
             ✕
           </button>
         </div>
 
         {/* Game Info */}
-        <div className="mb-6 p-3 bg-retro-dark rounded border border-retro-neon-blue/30">
-          <p className="text-xs text-gray-400">Playing</p>
-          <p className="font-bold text-retro-neon-blue">{game.title}</p>
+        <div className="mb-6 p-3 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded-lg border border-light-border-default dark:border-dark-border-default">
+          <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">Playing</p>
+          <p className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">{game.title}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Duration */}
           <div>
-            <label className="block text-sm font-bold text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
               Duration
             </label>
             <div className="flex gap-2">
@@ -84,11 +84,11 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
                   min="0"
                   max="12"
                   value={hours}
-                  onChange={(e) => setHours(Math.max(0, parseInt(e.target.value)))}
-                  className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+                  onChange={(e) => setHours(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary"
                   placeholder="Hours"
                 />
-                <p className="text-xs text-gray-400 mt-1">Hours</p>
+                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Hours</p>
               </div>
               <div className="flex-1">
                 <input
@@ -97,25 +97,25 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
                   max="59"
                   value={minutes}
                   onChange={(e) =>
-                    setMinutes(Math.min(59, Math.max(0, parseInt(e.target.value))))
+                    setMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))
                   }
-                  className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+                  className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary"
                   placeholder="Minutes"
                 />
-                <p className="text-xs text-gray-400 mt-1">Minutes</p>
+                <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Minutes</p>
               </div>
             </div>
           </div>
 
           {/* Platform */}
           <div>
-            <label className="block text-sm font-bold text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
               Platform
             </label>
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue"
+              className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary"
             >
               <option>PC</option>
               <option>PS5</option>
@@ -127,13 +127,13 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-bold text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
               Notes (optional)
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 bg-retro-dark border border-retro-neon-blue/50 rounded text-white font-mono focus:outline-none focus:border-retro-neon-blue resize-none h-20"
+              className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary resize-none h-20"
               placeholder="How did it go?"
             />
           </div>
@@ -143,14 +143,14 @@ export const SessionModal = ({ game, isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded transition"
+              className="flex-1 px-4 py-2 bg-light-bg-secondary dark:bg-dark-bg-secondary hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover text-light-text-primary dark:text-dark-text-primary font-semibold rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-retro-neon-green hover:bg-retro-neon-green/80 text-black font-bold rounded transition disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-light-accent-primary dark:bg-dark-accent-primary hover:opacity-90 text-white font-semibold rounded-lg transition-opacity disabled:opacity-50"
             >
               {loading ? 'Logging...' : 'Log Session'}
             </button>

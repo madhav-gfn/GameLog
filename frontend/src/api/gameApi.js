@@ -44,7 +44,10 @@ export const gameApi = {
     const response = await fetch(`${API_URL}/games/${gameId}`, {
       credentials: 'include',
     });
-    if (!response.ok) throw new Error('Failed to fetch game details');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to fetch game details (${response.status})`);
+    }
     return response.json();
   },
 };

@@ -1,95 +1,87 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Header, EmptyState, LoadingSkeleton } from '../components/Layout';
-import { FeedItem } from '../components/FeedItem';
+import { SearchBar } from '../components/SearchBar';
+import { TrendingCarousel } from '../components/TrendingCarousel';
+import { TopRated } from '../components/TopRated';
+import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { gameApi } from '../api/gameApi';
-import { useAuth } from '../contexts/AuthContext';
 
 export const Home = () => {
-  const { user } = useAuth();
-  const [activities, setActivities] = useState([]);
+  const [trendingGames, setTrendingGames] = useState([]);
+  const [topRatedGames, setTopRatedGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchActivities = async () => {
-      if (!user || !user.id) {
-        setLoading(false);
-        return;
-      }
-
+    const fetchHomeData = async () => {
       try {
         setLoading(true);
-        const data = await gameApi.getUserActivity(user.id);
-        setActivities(data);
         setError(null);
+
+        // Fetch trending games (sorted by popularity or recent)
+        const trendingData = await gameApi.getGames({ sortBy: 'popularity', page: 1 });
+        setTrendingGames(trendingData.games?.slice(0, 10) || []);
+
+        // Fetch top rated games
+        const topRatedData = await gameApi.getGames({ sortBy: 'rating', page: 1 });
+        setTopRatedGames(topRatedData.games?.slice(0, 4) || []);
       } catch (err) {
-        console.error('Failed to fetch activities:', err);
-        setError('Failed to load activity feed');
-        setActivities([]);
+        console.error('Failed to fetch home data:', err);
+        setError('Failed to load games');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchActivities();
-  }, [user]);
-
-  if (loading) {
-    return (
-      <div>
-        <Header
-          title="Activity Feed"
-          subtitle="See what your friends are playing"
-        />
-        <div className="space-y-4">
-          <LoadingSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div>
-        <Header
-          title="Activity Feed"
-          subtitle="See what your friends are playing"
-        />
-        <EmptyState
-          icon="⚠️"
-          title="Error loading feed"
-          description={error}
-        />
-      </div>
-    );
-  }
+    fetchHomeData();
+  }, []);
 
   return (
     <div>
-      <Header
-        title="Activity Feed"
-        subtitle="See what your friends are playing"
-      />
+      {/* Header Section */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+          GameFolio:
+        </h1>
+        <p className="text-lg text-light-text-secondary dark:text-dark-text-secondary mb-6">
+          Your Cozy Corner for Gaming Culture
+        </p>
+        <SearchBar className="max-w-2xl" />
+      </div>
 
-      <div className="space-y-4">
-        {activities.length > 0 ? (
-          activities.map((activity) => (
-            <Link
-              key={activity.id}
-              to={`/game/${activity.gameId}`}
-              className="block hover:no-underline"
-            >
-              <FeedItem activity={activity} />
-            </Link>
-          ))
-        ) : (
-          <EmptyState
-            icon="📭"
-            title="No activities yet"
-            description="Start playing games or follow friends to see activity here."
-          />
-        )}
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Trending Now */}
+        <div className="lg:col-span-2">
+          {loading ? (
+            <div className="space-y-4">
+              <LoadingSkeleton count={3} />
+            </div>
+          ) : error ? (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
+              {error}
+            </div>
+          ) : (
+            <TrendingCarousel games={trendingGames} title="Trending Now" />
+          )}
+        </div>
+
+        {/* Right Column - Top Rated */}
+        <div className="lg:col-span-1">
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="card p-3 animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-light-bg-secondary dark:bg-dark-bg-secondary" />
+                    <div className="flex-1 h-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? null : (
+            <TopRated games={topRatedGames} title="Top Rated" />
+          )}
+        </div>
       </div>
     </div>
   );
