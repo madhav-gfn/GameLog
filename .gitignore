@@ -11,3 +11,4 @@ build/
 .env.example
 backend/.env.example
 frontend/.env.example
+root/.env.example
