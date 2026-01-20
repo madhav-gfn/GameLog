@@ -2,14 +2,8 @@ node_modules/
 dist/
 build/
 .env
-.env.*
-.env.local
+.env*
 .DS_Store
 *.log
 .vscode/
 .idea/
-.env.example
-.env.example.*
-backend/.env.example
-frontend/.env.example
-root/.env.example
