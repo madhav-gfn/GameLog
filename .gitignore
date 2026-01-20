@@ -9,4 +9,5 @@ build/
 .vscode/
 .idea/
 .env.example
-
+backend/.env.example
+frontend/.env.example
