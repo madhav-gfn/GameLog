@@ -33,7 +33,9 @@ npm run dev
 cd frontend
 npm run dev
 ```
-
+### to be done
+## redis
+## jwt (soon)
 ## Production
 
 ```bash
