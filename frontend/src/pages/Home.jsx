@@ -3,6 +3,7 @@ import { SearchBar } from '../components/SearchBar';
 import { TrendingCarousel } from '../components/TrendingCarousel';
 import { TopRated } from '../components/TopRated';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
+import { SocialFeed } from '../components/SocialFeed';
 import { gameApi } from '../api/gameApi';
 
 export const Home = () => {
@@ -65,22 +66,33 @@ export const Home = () => {
           )}
         </div>
 
-        {/* Right Column - Top Rated */}
-        <div className="lg:col-span-1">
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="card p-3 animate-pulse">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-light-bg-secondary dark:bg-dark-bg-secondary" />
-                    <div className="flex-1 h-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded" />
+        {/* Right Column - Social & Top Rated */}
+        <div className="lg:col-span-1 space-y-8">
+          {/* Social Feed */}
+          <div>
+            <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
+              Community Activity
+            </h2>
+            <SocialFeed />
+          </div>
+
+          {/* Top Rated */}
+          <div>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="card p-3 animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-light-bg-secondary dark:bg-dark-bg-secondary" />
+                      <div className="flex-1 h-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded" />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : error ? null : (
-            <TopRated games={topRatedGames} title="Top Rated" />
-          )}
+                ))}
+              </div>
+            ) : error ? null : (
+              <TopRated games={topRatedGames} title="Top Rated" />
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import prisma from '../config/database.js';
+import { RAWG_API_KEY } from '../config/env.js';
+import { searchIGDBByName, fetchIGDBGameDetails, isIGDBConfigured } from './igdb.service.js';
 
-const RAWG_API_KEY = process.env.RAWG_API_KEY;
 const RAWG_BASE_URL = 'https://api.rawg.io/api';
 
 if (!RAWG_API_KEY) {
@@ -59,46 +60,22 @@ export async function fetchGamesFromRawg(options = {}) {
       page_size: pageSize,
     });
 
-    // Add search query
-    if (search) {
-      params.append('search', search);
-    }
+    if (search) params.append('search', search);
+    if (genre) params.append('genres', genre.toLowerCase());
+    if (platform) params.append('platforms', platform.toLowerCase());
 
-    // Add genre filter
-    if (genre) {
-      params.append('genres', genre.toLowerCase());
-    }
-
-    // Add platform filter
-    if (platform) {
-      params.append('platforms', platform.toLowerCase());
-    }
-
-    // Add sorting
     let ordering = '';
     switch (sortBy) {
-      case 'rating':
-        ordering = '-rating';
-        break;
-      case 'year':
-        ordering = '-released';
-        break;
-      case 'name':
-        ordering = 'name';
-        break;
-      case 'popularity':
-        ordering = '-popularity';
-        break;
-      default:
-        ordering = '-rating';
+      case 'rating': ordering = '-rating'; break;
+      case 'year': ordering = '-released'; break;
+      case 'name': ordering = 'name'; break;
+      case 'popularity': ordering = '-popularity'; break;
+      default: ordering = '-rating';
     }
     params.append('ordering', ordering);
 
     const response = await fetch(`${RAWG_BASE_URL}/games?${params}`);
-
-    if (!response.ok) {
-      throw new Error(`RAWG API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`RAWG API error: ${response.status}`);
 
     const data = await response.json();
 
@@ -117,17 +94,9 @@ export async function fetchGamesFromRawg(options = {}) {
 // Get all available genres
 export async function fetchGenres() {
   try {
-    const params = new URLSearchParams({
-      key: RAWG_API_KEY,
-      page_size: 50,
-    });
-
+    const params = new URLSearchParams({ key: RAWG_API_KEY, page_size: 50 });
     const response = await fetch(`${RAWG_BASE_URL}/genres?${params}`);
-
-    if (!response.ok) {
-      throw new Error(`RAWG API error: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`RAWG API error: ${response.status}`);
     const data = await response.json();
     return data.results.map((g) => ({ id: g.id, name: g.name }));
   } catch (error) {
@@ -139,17 +108,9 @@ export async function fetchGenres() {
 // Get all available platforms
 export async function fetchPlatforms() {
   try {
-    const params = new URLSearchParams({
-      key: RAWG_API_KEY,
-      page_size: 50,
-    });
-
+    const params = new URLSearchParams({ key: RAWG_API_KEY, page_size: 50 });
     const response = await fetch(`${RAWG_BASE_URL}/platforms?${params}`);
-
-    if (!response.ok) {
-      throw new Error(`RAWG API error: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`RAWG API error: ${response.status}`);
     const data = await response.json();
     return data.results.map((p) => ({ id: p.id, name: p.name }));
   } catch (error) {
@@ -165,30 +126,64 @@ export async function getOrCreateGame(rawgId) {
   });
 
   if (!game) {
-    // Fetch from RAWG API
     const response = await fetch(`${RAWG_BASE_URL}/games/${rawgId}?key=${RAWG_API_KEY}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch game from RAWG: ${response.status}`);
-    }
-    
+    if (!response.ok) throw new Error(`Failed to fetch game from RAWG: ${response.status}`);
+
     const rawgGame = await response.json();
-    
+
     game = await prisma.game.create({
       data: {
         rawgId: rawgGame.id,
         title: rawgGame.name,
         description: rawgGame.description_raw || rawgGame.description || '',
         coverImage: rawgGame.background_image,
-        backgroundImage: rawgGame.background_image_additional,
         releaseDate: rawgGame.released ? new Date(rawgGame.released) : null,
         genres: rawgGame.genres ? rawgGame.genres.map(g => g.name) : [],
         platforms: rawgGame.platforms ? rawgGame.platforms.map(p => p.platform.name) : [],
         developer: rawgGame.developers?.[0]?.name,
         publisher: rawgGame.publishers?.[0]?.name,
-        metacriticScore: rawgGame.metacritic,
       },
     });
   }
 
   return game;
+}
+
+/**
+ * Fetch IGDB enrichment data for a game.
+ * Looks up/caches only the igdbId in the database, fetches details live.
+ * Returns null if IGDB is not configured or no match found.
+ */
+export async function getIGDBEnrichment(game) {
+  if (!isIGDBConfigured()) return null;
+
+  try {
+    let igdbId = game.igdbId;
+
+    // If no igdbId cached yet, search IGDB by name and cache the mapping
+    if (!igdbId) {
+      const igdbMatch = await searchIGDBByName(game.title);
+      if (!igdbMatch) {
+        console.warn(`IGDB: No match found for "${game.title}"`);
+        return null;
+      }
+
+      igdbId = igdbMatch.id;
+
+      // Cache only the igdbId in the database
+      await prisma.game.update({
+        where: { id: game.id },
+        data: { igdbId },
+      });
+
+      console.log(`IGDB: Linked "${game.title}" to IGDB ID ${igdbId}`);
+    }
+
+    // Fetch full details live from IGDB
+    const details = await fetchIGDBGameDetails(igdbId);
+    return details;
+  } catch (error) {
+    console.error(`IGDB enrichment failed for "${game.title}":`, error.message);
+    return null;
+  }
 }

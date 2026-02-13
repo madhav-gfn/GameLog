@@ -18,20 +18,12 @@ enum GameStatus {
 
 enum ActivityType {
   STARTED
-  SESSION
   COMPLETED
   REVIEW
   COMMENT
+  SESSION
   LIST_CREATED
   GAME_ADDED
-}
-
-enum StreamPlatform {
-  TWITCH
-  YOUTUBE
-  KICK
-  FACEBOOK
-  OTHER
 }
 
 enum ListType {
@@ -50,16 +42,13 @@ model User {
   displayName   String?
   bio           String?
   avatar        String?
-  isStreamer    Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   games         UserGame[]
-  sessions      PlaySession[]
   comments      Comment[]
   lists         GameList[]
   activities    Activity[]
-  streams       Stream[]
 
   following     Follow[]    @relation("Following")
   followers     Follow[]    @relation("Followers")
@@ -71,31 +60,24 @@ model User {
 model Game {
   id              String      @id @default(uuid())
   rawgId          Int         @unique
+  igdbId          Int?        @unique
   title           String
   description     String?
   coverImage      String?
-  backgroundImage String?
   releaseDate     DateTime?
   genres          String[]    @default([])
   platforms       String[]    @default([])
   developer       String?
   publisher       String?
-  metacriticScore Int?
   avgRating       Float       @default(0)
   ratingCount     Int         @default(0)
-  playingCount    Int         @default(0)
-  completedCount  Int         @default(0)
-  abandonedCount  Int         @default(0)
-  wishlistCount   Int         @default(0)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   users           UserGame[]
-  sessions        PlaySession[]
   comments        Comment[]
   listItems       GameListItem[]
   activities      Activity[]
-  streams         Stream[]
 
   @@index([title])
   @@index([avgRating])
@@ -113,8 +95,6 @@ model UserGame {
   review       String?
   isPrivate    Boolean     @default(false)
   isFavorite   Boolean     @default(false)
-  playCount    Int         @default(1)
-  totalHours   Float       @default(0)
 
   startedAt    DateTime?
   completedAt  DateTime?
@@ -124,34 +104,10 @@ model UserGame {
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   game         Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
-  sessions     PlaySession[]
-
   @@unique([userId, gameId])
   @@index([status])
   @@index([rating])
   @@index([createdAt])
-}
-
-model PlaySession {
-  id              String     @id @default(uuid())
-  userId          String
-  gameId          String
-  userGameId      String?
-
-  durationMinutes Int
-  platform        String
-  note            String?
-  playedAt        DateTime   @default(now())
-  createdAt       DateTime   @default(now())
-
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game            Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  userGame        UserGame?  @relation(fields: [userGameId], references: [id], onDelete: Cascade)
-
-  streams         Stream[]
-
-  @@index([playedAt])
-  @@index([userId])
 }
 
 model Comment {
@@ -213,29 +169,6 @@ model Follow {
   following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
-}
-
-model Stream {
-  id            String          @id @default(uuid())
-  userId        String
-  gameId        String
-  sessionId     String?
-
-  platform      StreamPlatform
-  streamUrl     String
-  title         String?
-  isLive        Boolean         @default(false)
-
-  startedAt     DateTime
-  endedAt       DateTime?
-  createdAt     DateTime        @default(now())
-
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game          Game            @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  session       PlaySession?    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([platform])
-  @@index([startedAt])
 }
 
 model Activity {

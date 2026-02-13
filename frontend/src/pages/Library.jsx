@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Header, EmptyState, LoadingSkeleton } from '../components/Layout';
 import { GameCard } from '../components/GameCard';
 import { StatusBadge } from '../components/StatusBadge';
-import { gameApi } from '../api/gameApi';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Library = () => {
@@ -45,7 +44,7 @@ export const Library = () => {
     { value: 'PLAYING', label: '🎮 Playing' },
     { value: 'COMPLETED', label: '🏆 Completed' },
     { value: 'BACKLOG', label: '📝 Backlog' },
-    { value: 'DROPPED', label: '❌ Dropped' },
+    { value: 'ABANDONED', label: '❌ Dropped' },
     { value: 'WISHLIST', label: '🤍 Wishlist' },
   ];
 
@@ -99,11 +98,10 @@ export const Library = () => {
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-              activeTab === tab.value
-                ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
-                : 'bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover'
-            }`}
+            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${activeTab === tab.value
+              ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
+              : 'bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover'
+              }`}
           >
             {tab.label}
           </button>
@@ -152,14 +150,9 @@ export const Library = () => {
                   </p>
                 )}
 
-                {/* Stats */}
-                {game && (
+                {game.rating && (
                   <div className="flex gap-4 text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                    <span>⏱️ {game.totalHours || 0}h</span>
-                    <span>📊 {game.sessions || 0} sessions</span>
-                    {game.rating && (
-                      <span>⭐ {game.rating}/5</span>
-                    )}
+                    <span>⭐ {game.rating}/10</span>
                   </div>
                 )}
               </div>

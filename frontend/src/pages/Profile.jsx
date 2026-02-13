@@ -4,9 +4,13 @@ import { Header, LoadingSkeleton } from '../components/Layout';
 import { GameCard } from '../components/GameCard';
 import { useAuth } from '../contexts/AuthContext';
 
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { ListsManager } from '../components/ListsManager';
+
 export const Profile = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('Overview');
   const [userLibrary, setUserLibrary] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +25,7 @@ export const Profile = () => {
 
       try {
         setLoading(true);
-        
+
         // Fetch library data
         const libraryResponse = await fetch(`http://localhost:5000/api/users/${user.id}/library`, {
           credentials: 'include',
@@ -58,7 +62,7 @@ export const Profile = () => {
               favoriteGenres: [],
             });
           }
-        } catch (profileError) {
+        } catch {
           // Fallback to auth user data
           setUserProfile({
             username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
@@ -69,7 +73,7 @@ export const Profile = () => {
             favoriteGenres: [],
           });
         }
-        
+
         setError(null);
       } catch (err) {
         console.error('Failed to fetch user data:', err);
@@ -105,23 +109,21 @@ export const Profile = () => {
   // Transform UserGame objects to include game data at top level for easier access
   const transformedLibrary = Array.isArray(userLibrary)
     ? userLibrary.map((userGame) => ({
-        ...userGame.game,
-        id: userGame.gameId, // Use gameId for navigation
-        rawgId: userGame.game?.rawgId || userGame.gameId, // Fallback to gameId if rawgId not available
-        status: userGame.status,
-        rating: userGame.rating,
-        review: userGame.review,
-        totalHours: userGame.totalHours || 0,
-        sessions: userGame.playCount || 0,
-        updatedAt: userGame.updatedAt,
-      }))
+      ...userGame.game,
+      id: userGame.gameId,
+      rawgId: userGame.game?.rawgId || userGame.gameId,
+      status: userGame.status,
+      rating: userGame.rating,
+      review: userGame.review,
+      updatedAt: userGame.updatedAt,
+    }))
     : [];
 
   const recentGames = transformedLibrary
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     .slice(0, 4);
 
-  const totalHours = transformedLibrary.reduce((sum, g) => sum + (g.totalHours || 0), 0);
+
 
   return (
     <div>
@@ -142,12 +144,11 @@ export const Profile = () => {
                 />
               ) : null}
               <div
-                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-light-accent-primary dark:bg-dark-accent-primary text-white border-2 border-light-border-default dark:border-dark-border-default ${
-                  userProfile.avatar && userProfile.avatar.startsWith('http') ? 'hidden' : ''
-                }`}
+                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-light-accent-primary dark:bg-dark-accent-primary text-white border-2 border-light-border-default dark:border-dark-border-default ${userProfile.avatar && userProfile.avatar.startsWith('http') ? 'hidden' : ''
+                  }`}
               >
-                {userProfile.avatar && !userProfile.avatar.startsWith('http') 
-                  ? userProfile.avatar 
+                {userProfile.avatar && !userProfile.avatar.startsWith('http')
+                  ? userProfile.avatar
                   : userProfile.username?.[0]?.toUpperCase() || 'U'}
               </div>
             </div>
@@ -175,69 +176,77 @@ export const Profile = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-12">
-        <div className="card p-4 text-center">
-          <div className="text-3xl font-bold text-light-accent-secondary dark:text-dark-accent-secondary">
-            {totalHours}
-          </div>
-          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Total Hours</div>
-        </div>
-
-        <div className="card p-4 text-center">
-          <div className="text-3xl font-bold text-light-accent-primary dark:text-dark-accent-primary">
-            {transformedLibrary.length}
-          </div>
-          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Games Tracked</div>
-        </div>
-
-        <div className="card p-4 text-center">
-          <div className="text-3xl font-bold text-light-accent-tertiary dark:text-dark-accent-tertiary">
-            {transformedLibrary.filter((g) => g.status === 'COMPLETED').length}
-          </div>
-          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">Completed</div>
+      {/* Profile Content Tabs */}
+      <div className="mb-6 border-b border-light-border-default dark:border-dark-border-default">
+        <div className="flex gap-8">
+          {['Overview', 'Library', 'Lists'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === tab
+                ? 'text-light-accent-primary dark:text-dark-accent-primary'
+                : 'text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary'
+                }`}
+            >
+              {tab}
+              {activeTab === tab && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-light-accent-primary dark:bg-dark-accent-primary rounded-t-full" />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Favorite Genres */}
-      {userProfile.favoriteGenres.length > 0 && (
-        <div className="card p-6 mb-8">
-          <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-            Favorite Genres
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {userProfile.favoriteGenres.map((genre) => (
-              <span
-                key={genre}
-                className="px-4 py-2 bg-light-accent-secondary/10 dark:bg-dark-accent-secondary/20 text-light-accent-secondary dark:text-dark-accent-secondary rounded-lg font-semibold text-sm"
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Tab Content */}
+      <div className="space-y-8">
+        {activeTab === 'Overview' && (
+          <>
+            <AnalyticsDashboard />
 
-      {/* Recently Played */}
-      <div>
-        <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-6">
-          Recently Played
-        </h2>
-        {recentGames.length > 0 ? (
+            {/* Recently Played */}
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-6">
+                Recently Played
+              </h2>
+              {recentGames.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {recentGames.map((game) => (
+                    <GameCard
+                      key={game.id || game.rawgId}
+                      game={game}
+                      compact
+                      onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
+                  No games played yet. Start tracking your games!
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'Library' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {recentGames.map((game) => (
+            {transformedLibrary.map((game) => (
               <GameCard
                 key={game.id || game.rawgId}
                 game={game}
-                compact
                 onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
               />
             ))}
+            {transformedLibrary.length === 0 && (
+              <div className="col-span-full text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
+                Your library is empty.
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
-            No games played yet. Start tracking your games!
-          </div>
+        )}
+
+        {activeTab === 'Lists' && (
+          <ListsManager userId={userProfile.id || user.id} />
         )}
       </div>
     </div>

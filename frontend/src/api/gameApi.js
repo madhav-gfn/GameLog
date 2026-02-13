@@ -1,53 +1,49 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { api } from './axios.js';
 
 export const gameApi = {
   // Fetch games with filters
   async getGames(filters = {}) {
-    const params = new URLSearchParams();
-    
-    if (filters.search) params.append('search', filters.search);
-    if (filters.genre) params.append('genre', filters.genre);
-    if (filters.platform) params.append('platform', filters.platform);
-    if (filters.sortBy) params.append('sortBy', filters.sortBy);
-    if (filters.page) params.append('page', filters.page);
-
-    const response = await fetch(`${API_URL}/games?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch games');
-    return response.json();
+    // Axios handles param serialization automatically
+    const response = await api.get('/games', { params: filters });
+    return response;
   },
 
   // Fetch available genres
   async getGenres() {
-    const response = await fetch(`${API_URL}/games/genres`);
-    if (!response.ok) throw new Error('Failed to fetch genres');
-    return response.json();
+    return api.get('/games/genres');
   },
 
   // Fetch available platforms
   async getPlatforms() {
-    const response = await fetch(`${API_URL}/games/platforms`);
-    if (!response.ok) throw new Error('Failed to fetch platforms');
-    return response.json();
+    return api.get('/games/platforms');
   },
 
   // Fetch user activity
   async getUserActivity(userId) {
-    const response = await fetch(`${API_URL}/users/${userId}/activity`, {
-      credentials: 'include',
-    });
-    if (!response.ok) throw new Error('Failed to fetch user activity');
-    return response.json();
+    return api.get(`/users/${userId}/activity`);
   },
 
   // Fetch game details
   async getGameDetail(gameId) {
-    const response = await fetch(`${API_URL}/games/${gameId}`, {
-      credentials: 'include',
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to fetch game details (${response.status})`);
-    }
-    return response.json();
+    return api.get(`/games/${gameId}`);
   },
+
+  // Add game to library
+  async addGameToLibrary(gameId, { status, rating, review }) {
+    return api.post(`/games/${gameId}/library`, { status, rating, review });
+  },
+
+  // Get game from library (for user context)
+  async getGameFromLibrary() {
+    // This is often implicitly handled by getGameDetail if backend supports it, 
+    // or fetched via user library endpoint. Using the user library endpoint for now if available, 
+    // or relying on what's available. 
+    // Assuming backend endpoint exists or is handled elsewhere. 
+    // If not, we might need to fetch user's full library or specific check.
+    // For now, let's assume we use the user endpoint or handle it in component.
+    // Wait, the backend doesn't have a direct 'get one game from library' endpoint except via user games list.
+    // But we can check status via `getGameDetail` if it returns user specific info (it usually doesn't for public cache).
+    // The `addGameToLibrary` returns the UserGame object.
+    return null;
+  }
 };

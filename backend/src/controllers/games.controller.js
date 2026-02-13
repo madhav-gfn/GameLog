@@ -1,7 +1,7 @@
-import { fetchGamesFromRawg, fetchGenres, fetchPlatforms, getOrCreateGame } from '../services/gamesService.js';
+import { fetchGamesFromRawg, fetchGenres, fetchPlatforms, getOrCreateGame, getIGDBEnrichment } from '../services/games.service.js';
 import prisma from '../config/database.js';
 
-// Get games with filters
+// Get games with filters (RAWG-powered)
 export async function getGames(req, res) {
   try {
     const { search = '', genre = '', platform = '', sortBy = 'rating', page = 1 } = req.query;
@@ -22,18 +22,16 @@ export async function getGames(req, res) {
   }
 }
 
-// Get game details with stats
+// Get game details with IGDB enrichment (fetched live)
 export async function getGameDetails(req, res) {
   try {
     const { id } = req.params;
-    
-    // Check if id is a UUID (database ID) or a number (RAWG ID)
+
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    
+
     let game;
-    
+
     if (isUUID) {
-      // Look up by database UUID
       game = await prisma.game.findUnique({
         where: { id },
         include: {
@@ -43,20 +41,16 @@ export async function getGameDetails(req, res) {
             take: 10,
           },
           _count: {
-            select: {
-              users: true,
-              comments: true,
-            },
+            select: { users: true, comments: true },
           },
         },
       });
     } else {
-      // Treat as RAWG ID - first try to find in database
       const rawgId = parseInt(id);
       if (isNaN(rawgId)) {
         return res.status(400).json({ error: 'Invalid game ID format' });
       }
-      
+
       game = await prisma.game.findUnique({
         where: { rawgId },
         include: {
@@ -66,20 +60,14 @@ export async function getGameDetails(req, res) {
             take: 10,
           },
           _count: {
-            select: {
-              users: true,
-              comments: true,
-            },
+            select: { users: true, comments: true },
           },
         },
       });
-      
-      // If not found in database, fetch from RAWG and create it
+
       if (!game) {
         try {
           game = await getOrCreateGame(rawgId);
-          
-          // Fetch again with includes
           game = await prisma.game.findUnique({
             where: { id: game.id },
             include: {
@@ -89,10 +77,7 @@ export async function getGameDetails(req, res) {
                 take: 10,
               },
               _count: {
-                select: {
-                  users: true,
-                  comments: true,
-                },
+                select: { users: true, comments: true },
               },
             },
           });
@@ -107,7 +92,10 @@ export async function getGameDetails(req, res) {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    // Transform the game data to match frontend expectations
+    // Fetch IGDB enrichment live (not stored in DB)
+    const igdbData = await getIGDBEnrichment(game);
+
+    // Build response
     const gameData = {
       ...game,
       id: game.id,
@@ -116,6 +104,17 @@ export async function getGameDetails(req, res) {
       releaseYear: game.releaseDate ? new Date(game.releaseDate).getFullYear() : null,
       averageRating: game.avgRating,
       ratingCount: game.ratingCount,
+      // IGDB enrichment (live-fetched, empty arrays if IGDB unavailable)
+      screenshots: igdbData?.screenshots || [],
+      artworks: igdbData?.artworks || [],
+      storyline: igdbData?.storyline || null,
+      videos: igdbData?.videos || [],
+      similarGames: igdbData?.similarGames || [],
+      themes: igdbData?.themes || [],
+      gameModes: igdbData?.gameModes || [],
+      companies: igdbData?.companies || [],
+      ageRatings: igdbData?.ageRatings || [],
+      igdbCover: igdbData?.cover || null,
     };
 
     res.json(gameData);
@@ -130,10 +129,10 @@ export async function addGameToLibrary(req, res) {
   try {
     const { gameId } = req.params;
     const { status, rating, review } = req.body;
-    const userId = req.user.id; // Assuming auth middleware
+    const userId = req.user.id;
 
     const game = await getOrCreateGame(gameId);
-    
+
     const userGame = await prisma.userGame.upsert({
       where: {
         userId_gameId: { userId, gameId: game.id },
@@ -156,10 +155,26 @@ export async function addGameToLibrary(req, res) {
     // Update game stats
     await updateGameStats(game.id);
 
+    // Log activity
+    const activityType = status === 'PLAYING' ? 'STARTED' : 'GAME_ADDED';
+    await prisma.activity.create({
+      data: {
+        userId,
+        gameId: game.id,
+        type: activityType,
+        entityId: userGame.id,
+        metadata: { status },
+      },
+    });
+
     res.json(userGame);
   } catch (error) {
     console.error('Error in addGameToLibrary controller:', error);
-    res.status(500).json({ error: 'Failed to add game to library' });
+    res.status(500).json({
+      error: 'Failed to add game to library',
+      details: error.message,
+      code: error.code || null
+    });
   }
 }
 
@@ -187,29 +202,17 @@ export async function getPlatforms(req, res) {
 
 // Helper function to update game statistics
 async function updateGameStats(gameId) {
-  const stats = await prisma.userGame.groupBy({
-    by: ['status'],
-    where: { gameId },
-    _count: { status: true },
-  });
-
   const avgRating = await prisma.userGame.aggregate({
     where: { gameId, rating: { not: null } },
     _avg: { rating: true },
     _count: { rating: true },
   });
 
-  const statusCounts = stats.reduce((acc, stat) => {
-    acc[stat.status.toLowerCase() + 'Count'] = stat._count.status;
-    return acc;
-  }, {});
-
   await prisma.game.update({
     where: { id: gameId },
     data: {
       avgRating: avgRating._avg.rating || 0,
       ratingCount: avgRating._count.rating || 0,
-      ...statusCounts,
     },
   });
 }

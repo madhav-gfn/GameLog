@@ -1,6 +1,6 @@
 import express from 'express';
-import { getGameComments, addComment } from '../controllers/commentsController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { getGameComments, addComment } from '../controllers/comments.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
