@@ -1,4 +1,4 @@
-import { getUserById, getUserStats } from '../services/user.service.js';
+import { getUserById, getUserStatsData, updateUserProfile } from '../services/user.service.js';
 import prisma from '../config/database.js';
 
 // Get user profile
@@ -11,9 +11,25 @@ export async function getUserProfile(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const stats = await getUserStats(id);
+    // Respect privacy: if profile is private and requester is not the owner
+    const requesterId = req.user?.id || null;
+    if (!user.isPublic && requesterId !== id) {
+      return res.json({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        isPublic: false,
+        message: 'This profile is private',
+      });
+    }
 
-    res.json({ ...user, stats });
+    const stats = await getUserStatsData(id);
+
+    // Remove sensitive fields
+    const { passwordHash, ...safeUser } = user;
+
+    res.json({ ...safeUser, stats });
   } catch (error) {
     console.error('Error in getUserProfile controller:', error);
     res.status(500).json({ error: 'Failed to fetch user profile' });
@@ -56,26 +72,38 @@ export async function getUserLibrary(req, res) {
   }
 }
 
-// Get user activity feed
-export async function getUserActivity(req, res) {
+// Update own profile
+export async function updateProfile(req, res) {
   try {
-    const { id } = req.params;
-    const { page = 1, limit = 20 } = req.query;
+    const userId = req.user.id;
+    const { displayName, bio, avatar, platformsPlayed, isPublic } = req.body;
 
-    const activities = await prisma.activity.findMany({
-      where: { userId: id },
-      include: {
-        user: { select: { username: true, avatar: true } },
-        game: { select: { title: true, coverImage: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: parseInt(limit),
+    const updatedUser = await updateUserProfile(userId, {
+      displayName,
+      bio,
+      avatar,
+      platformsPlayed,
+      isPublic,
     });
 
-    res.json({ activities });
+    // Remove sensitive fields
+    const { passwordHash, ...safeUser } = updatedUser;
+
+    res.json({ success: true, data: safeUser });
   } catch (error) {
-    console.error('Error in getUserActivity controller:', error);
-    res.status(500).json({ error: 'Failed to fetch user activity' });
+    console.error('Error in updateProfile controller:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+}
+
+// Get user stats
+export async function getUserStats(req, res) {
+  try {
+    const { id } = req.params;
+    const stats = await getUserStatsData(id);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error in getUserStats controller:', error);
+    res.status(500).json({ error: 'Failed to fetch user stats' });
   }
 }

@@ -3,24 +3,13 @@ import prisma from '../config/database.js';
 /**
  * Create a new game list.
  */
-export async function createList(userId, { title, description, type, isPublic }) {
+export async function createList(userId, { title, description, isPublic }) {
     const list = await prisma.gameList.create({
         data: {
             userId,
             title,
             description: description || null,
-            type: type || 'CUSTOM',
             isPublic: isPublic !== undefined ? isPublic : true,
-        },
-    });
-
-    // Log activity
-    await prisma.activity.create({
-        data: {
-            userId,
-            type: 'LIST_CREATED',
-            entityId: list.id,
-            metadata: { title },
         },
     });
 
@@ -114,7 +103,6 @@ export async function updateList(id, userId, data) {
         data: {
             title: data.title ?? list.title,
             description: data.description !== undefined ? data.description : list.description,
-            type: data.type ?? list.type,
             isPublic: data.isPublic !== undefined ? data.isPublic : list.isPublic,
         },
     });
@@ -143,7 +131,7 @@ export async function deleteList(id, userId) {
 /**
  * Add a game to a list.
  */
-export async function addItemToList(listId, userId, gameId, note) {
+export async function addItemToList(listId, userId, gameId) {
     const list = await prisma.gameList.findUnique({ where: { id: listId } });
 
     if (!list) {
@@ -169,21 +157,9 @@ export async function addItemToList(listId, userId, gameId, note) {
             listId,
             gameId,
             position: nextPosition,
-            note: note || null,
         },
         include: {
             game: { select: { id: true, title: true, coverImage: true } },
-        },
-    });
-
-    // Log activity
-    await prisma.activity.create({
-        data: {
-            userId,
-            gameId,
-            type: 'GAME_ADDED',
-            entityId: item.id,
-            metadata: { listTitle: list.title },
         },
     });
 

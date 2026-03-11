@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header, LoadingSkeleton } from '../components/Layout';
 import { RatingStars } from '../components/RatingStars';
-import { StatusBadge } from '../components/StatusBadge';
 import { ReviewForm } from '../components/ReviewForm';
 import { ReviewList } from '../components/ReviewList';
 import { gameApi } from '../api/gameApi';
@@ -24,7 +23,6 @@ export const GameDetail = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  // Fetch game data
   const fetchGameData = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -39,12 +37,10 @@ export const GameDetail = () => {
     }
   }, [gameId]);
 
-  // Re-fetch when gameId changes
   useEffect(() => {
     fetchGameData();
 
-    // Fetch user's status for this game
-    if (user && user.id) {
+    if (user?.id) {
       api.get(`/users/${user.id}/library`).then(res => {
         const games = res.games || res || [];
         const found = games.find(g => g.gameId === gameId || g.game?.rawgId === Number(gameId));
@@ -70,7 +66,7 @@ export const GameDetail = () => {
       if (updates.status) setSelectedStatus(updates.status);
     } catch (err) {
       console.error('Failed to update library:', err);
-      setLibraryError(err?.response?.data?.error || err.message || 'Failed to update library. Please try again.');
+      setLibraryError(err?.response?.data?.error || err.message || 'Failed to update library.');
     }
   };
 
@@ -79,23 +75,10 @@ export const GameDetail = () => {
     window.location.reload();
   };
 
-  // Lightbox navigation
-  const openLightbox = (index) => {
-    setLightboxIndex(index);
-    setLightboxOpen(true);
-  };
-
+  const openLightbox = (index) => { setLightboxIndex(index); setLightboxOpen(true); };
   const closeLightbox = () => setLightboxOpen(false);
-
-  const nextImage = () => {
-    const images = game?.screenshots || [];
-    setLightboxIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
-    const images = game?.screenshots || [];
-    setLightboxIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
+  const nextImage = () => { const images = game?.screenshots || []; setLightboxIndex((prev) => (prev + 1) % images.length); };
+  const prevImage = () => { const images = game?.screenshots || []; setLightboxIndex((prev) => (prev - 1 + images.length) % images.length); };
 
   if (loading) {
     return (
@@ -109,18 +92,13 @@ export const GameDetail = () => {
   if (error || !game) {
     return (
       <div>
-        <Header
-          title="Game Not Found"
-          subtitle={error || "The game you're looking for doesn't exist or couldn't be loaded."}
-        />
-        <div className="flex gap-4 mt-6">
-          <button
-            onClick={() => navigate('/discover')}
-            className="px-4 py-2 bg-light-accent-primary dark:bg-dark-accent-primary text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
-          >
-            Back to Discover
-          </button>
-        </div>
+        <Header title="Game Not Found" subtitle={error || "The game you're looking for doesn't exist."} />
+        <button
+          onClick={() => navigate('/discover')}
+          className="px-6 py-3 bg-primary text-navy font-bold uppercase rounded tracking-wider hover:bg-yellow-400 transition-colors"
+        >
+          Back to Discover
+        </button>
       </div>
     );
   }
@@ -135,36 +113,25 @@ export const GameDetail = () => {
   const developers = companies.filter(c => c.developer);
   const publishers = companies.filter(c => c.publisher);
 
+  const statusButtons = ['BACKLOG', 'PLAYING', 'COMPLETED', 'ABANDONED'];
+
   return (
     <div>
       {/* Hero Section */}
-      <div className="mb-8 -mx-4 sm:-mx-6 -mt-8">
-        <div className="relative h-80 bg-light-bg-secondary dark:bg-dark-bg-secondary overflow-hidden rounded-lg">
-          <img
-            src={game.cover}
-            alt={game.title}
-            className="w-full h-full object-cover opacity-40 dark:opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-light-bg-primary dark:from-dark-bg-primary via-light-bg-primary/80 dark:via-dark-bg-primary/80 to-transparent" />
-
-          <div className="absolute bottom-6 left-6 right-6">
-            <h1 className="text-4xl font-bold text-light-text-primary dark:text-dark-text-primary mb-3">
+      <div className="mb-8 -mx-8 -mt-8">
+        <div className="relative h-80 bg-graphite overflow-hidden">
+          <img src={game.cover} alt={game.title} className="w-full h-full object-cover opacity-30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/80 to-transparent" />
+          <div className="absolute bottom-6 left-8 right-8">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white uppercase tracking-tighter mb-3">
               {game.title}
             </h1>
             <div className="flex gap-3 flex-wrap items-center">
-              {game.releaseYear && (
-                <span className="text-light-text-secondary dark:text-dark-text-secondary">{game.releaseYear}</span>
-              )}
+              {game.releaseYear && <span className="text-gray-400 font-bold">{game.releaseYear}</span>}
               <RatingStars rating={game.averageRating} />
-              {game.ratingCount && (
-                <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                  {game.ratingCount} ratings
-                </span>
-              )}
+              {game.ratingCount > 0 && <span className="text-xs text-gray-500">{game.ratingCount} ratings</span>}
               {developers.length > 0 && (
-                <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                  by {developers.map(d => d.name).join(', ')}
-                </span>
+                <span className="text-xs text-primary font-bold uppercase">by {developers.map(d => d.name).join(', ')}</span>
               )}
             </div>
           </div>
@@ -174,49 +141,32 @@ export const GameDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Description / Storyline */}
-          <div className="card p-6">
-            <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-3">
-              About
-            </h2>
-            <p className="text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
-              {game.description || 'No description available.'}
-            </p>
-
-            {/* Storyline from IGDB */}
+          {/* About */}
+          <div className="bg-navy border-2 border-graphite rounded p-6">
+            <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-3">About</h2>
+            <p className="text-gray-400 leading-relaxed">{game.description || 'No description available.'}</p>
             {game.storyline && (
-              <div className="mt-4 pt-4 border-t border-light-border-default dark:border-dark-border-default">
-                <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-                  Storyline
-                </h3>
-                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
-                  {game.storyline}
-                </p>
+              <div className="mt-4 pt-4 border-t-2 border-graphite">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Storyline</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{game.storyline}</p>
               </div>
             )}
           </div>
 
-          {/* Screenshots Gallery */}
+          {/* Screenshots */}
           {screenshots.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-                Screenshots
-              </h2>
+            <div className="bg-navy border-2 border-graphite rounded p-6">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-4">Screenshots</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {screenshots.map((screenshot, index) => (
                   <button
                     key={index}
                     onClick={() => openLightbox(index)}
-                    className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer border border-light-border-default dark:border-dark-border-default"
+                    className="relative aspect-video rounded overflow-hidden group cursor-pointer border-2 border-graphite hover:border-primary transition-colors"
                   >
-                    <img
-                      src={screenshot.url}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xl">🔍</span>
+                    <img src={screenshot.url} alt={`Screenshot ${index + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-primary/10 transition-colors duration-300 flex items-center justify-center">
+                      <span className="material-symbols-outlined opacity-0 group-hover:opacity-100 transition-opacity text-white text-xl">zoom_in</span>
                     </div>
                   </button>
                 ))}
@@ -224,28 +174,16 @@ export const GameDetail = () => {
             </div>
           )}
 
-          {/* Videos / Trailers */}
+          {/* Videos */}
           {videos.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-                Videos & Trailers
-              </h2>
+            <div className="bg-navy border-2 border-graphite rounded p-6">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-4">Videos & Trailers</h2>
               <div className="space-y-4">
                 {videos.slice(0, 3).map((video, index) => (
                   <div key={index}>
-                    {video.name && (
-                      <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-                        {video.name}
-                      </h3>
-                    )}
-                    <div className="relative aspect-video rounded-lg overflow-hidden border border-light-border-default dark:border-dark-border-default">
-                      <iframe
-                        src={video.embedUrl}
-                        title={video.name || `Trailer ${index + 1}`}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                    {video.name && <h3 className="text-sm font-bold text-white uppercase mb-2">{video.name}</h3>}
+                    <div className="relative aspect-video rounded overflow-hidden border-2 border-graphite">
+                      <iframe src={video.embedUrl} title={video.name || `Trailer ${index + 1}`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                     </div>
                   </div>
                 ))}
@@ -255,37 +193,19 @@ export const GameDetail = () => {
 
           {/* Similar Games */}
           {similarGames.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-                Similar Games
-              </h2>
+            <div className="bg-navy border-2 border-graphite rounded p-6">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-4">Similar Games</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {similarGames.slice(0, 8).map((sg, index) => (
-                  <div
-                    key={index}
-                    className="group cursor-pointer"
-                    onClick={() => {
-                      // Navigate to IGDB game — we'd need to search by name
-                      // For now, just show the card
-                    }}
-                  >
-                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden border border-light-border-default dark:border-dark-border-default bg-light-bg-secondary dark:bg-dark-bg-secondary">
+                  <div key={index} className="group cursor-pointer">
+                    <div className="relative aspect-[3/4] rounded overflow-hidden border-2 border-graphite bg-graphite group-hover:border-primary transition-colors">
                       {sg.cover ? (
-                        <img
-                          src={sg.cover}
-                          alt={sg.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
+                        <img src={sg.cover} alt={sg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-light-text-tertiary dark:text-dark-text-tertiary text-xs text-center p-2">
-                          No Cover
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs text-center p-2">No Cover</div>
                       )}
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-light-text-primary dark:text-dark-text-primary truncate group-hover:text-light-accent-primary dark:group-hover:text-dark-accent-primary transition-colors">
-                      {sg.name}
-                    </p>
+                    <p className="mt-2 text-xs font-bold text-white truncate uppercase group-hover:text-primary transition-colors">{sg.name}</p>
                   </div>
                 ))}
               </div>
@@ -294,38 +214,28 @@ export const GameDetail = () => {
 
           {/* Artworks */}
           {artworks.length > 0 && (
-            <div className="card p-6">
-              <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-                Artworks
-              </h2>
+            <div className="bg-navy border-2 border-graphite rounded p-6">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-4">Artworks</h2>
               <div className="grid grid-cols-2 gap-3">
                 {artworks.map((artwork, index) => (
-                  <div
-                    key={index}
-                    className="relative aspect-video rounded-lg overflow-hidden border border-light-border-default dark:border-dark-border-default"
-                  >
-                    <img
-                      src={artwork.url}
-                      alt={`Artwork ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
+                  <div key={index} className="relative aspect-video rounded overflow-hidden border-2 border-graphite">
+                    <img src={artwork.url} alt={`Artwork ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Reviews Section */}
-          <div className="card p-6">
-            <h2 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary mb-4">Reviews</h2>
+          {/* Reviews */}
+          <div className="bg-navy border-2 border-graphite rounded p-6">
+            <h2 className="text-lg font-bold text-white uppercase tracking-wider mb-4">Reviews</h2>
             {user ? (
               <div className="mb-8">
                 <ReviewForm gameId={game.id} onReviewSubmitted={onReviewSubmitted} />
               </div>
             ) : (
-              <div className="mb-8 p-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded text-center">
-                <p>Log in to write a review!</p>
+              <div className="mb-8 p-4 bg-graphite/30 rounded text-center text-gray-400 font-bold uppercase text-sm">
+                Log in to write a review
               </div>
             )}
             <ReviewList gameId={game.id} />
@@ -336,167 +246,97 @@ export const GameDetail = () => {
         <div className="space-y-4">
           {/* Status */}
           {userGame ? (
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-3">Status</h3>
+            <div className="bg-navy border-2 border-graphite rounded p-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Status</h3>
               <div className="space-y-2">
-                {['BACKLOG', 'PLAYING', 'COMPLETED', 'ABANDONED'].map((status) => (
+                {statusButtons.map((status) => (
                   <button
                     key={status}
                     onClick={() => handleUpdateLibrary({ status })}
-                    className={`w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${userGame.status === status
-                      ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
-                      : 'bg-light-bg-secondary dark:bg-dark-bg-secondary border border-light-border-default dark:border-dark-border-default text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-hover dark:hover:bg-dark-bg-hover'
+                    className={`w-full px-3 py-2 rounded text-sm font-bold uppercase tracking-wider transition-colors ${userGame.status === status
+                        ? 'bg-primary text-navy'
+                        : 'bg-graphite/50 text-gray-400 hover:bg-graphite hover:text-white'
                       }`}
                   >
-                    <StatusBadge status={status} />
+                    {status}
                   </button>
                 ))}
-              </div>
-
-              {/* Stats */}
-              <div className="mt-6 pt-4 border-t border-light-border-default dark:border-dark-border-default space-y-2 text-sm">
-                <div className="flex justify-between text-light-text-secondary dark:text-dark-text-secondary">
-                  <span>Total Hours:</span>
-                  <span className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">
-                    {userGame.totalHours || 0}h
-                  </span>
-                </div>
               </div>
             </div>
           ) : (
             <button
               onClick={() => handleUpdateLibrary({ status: 'BACKLOG' })}
-              className="w-full px-4 py-3 bg-light-accent-primary dark:bg-dark-accent-primary text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full px-4 py-4 bg-primary text-navy font-bold uppercase tracking-widest rounded hover:bg-yellow-400 transition-colors shadow-glow-yellow"
             >
               + Add to Library
             </button>
           )}
 
-          {/* Library Error */}
           {libraryError && (
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            <div className="p-3 bg-crimson/20 border border-crimson rounded text-crimson text-sm font-bold">
               {libraryError}
             </div>
           )}
 
-          {/* Game Info Sidebar */}
-          <div className="card p-4">
-            <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-3">
-              Game Info
-            </h3>
+          {/* Game Info */}
+          <div className="bg-navy border-2 border-graphite rounded p-4">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">Game Info</h3>
             <div className="space-y-3 text-sm">
-              {/* Genres */}
-              {game.genres && game.genres.length > 0 && (
+              {game.genres?.length > 0 && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Genres</span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Genres</span>
                   <div className="flex gap-1 flex-wrap">
                     {game.genres.map((genre) => (
-                      <span
-                        key={genre}
-                        className="text-xs px-2 py-1 bg-light-accent-secondary/10 dark:bg-dark-accent-secondary/20 text-light-accent-secondary dark:text-dark-accent-secondary rounded"
-                      >
-                        {genre}
-                      </span>
+                      <span key={genre} className="text-xs px-2 py-1 bg-graphite/50 text-gray-300 rounded">{genre}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Platforms */}
-              {game.platforms && game.platforms.length > 0 && (
+              {game.platforms?.length > 0 && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Platforms</span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Platforms</span>
                   <div className="flex gap-1 flex-wrap">
                     {game.platforms.map((platform) => (
-                      <span
-                        key={platform}
-                        className="text-xs px-2 py-1 bg-light-accent-primary/10 dark:bg-dark-accent-primary/20 text-light-accent-primary dark:text-dark-accent-primary rounded border border-light-accent-primary/20 dark:border-dark-accent-primary/30"
-                      >
-                        {platform}
-                      </span>
+                      <span key={platform} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded border border-primary/20 font-bold">{platform}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Themes (from IGDB) */}
               {themes.length > 0 && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Themes</span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Themes</span>
                   <div className="flex gap-1 flex-wrap">
                     {themes.map((theme) => (
-                      <span
-                        key={theme}
-                        className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded"
-                      >
-                        {theme}
-                      </span>
+                      <span key={theme} className="text-xs px-2 py-1 bg-graphite/50 text-gray-300 rounded">{theme}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Game Modes (from IGDB) */}
               {gameModes.length > 0 && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Game Modes</span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Game Modes</span>
                   <div className="flex gap-1 flex-wrap">
                     {gameModes.map((mode) => (
-                      <span
-                        key={mode}
-                        className="text-xs px-2 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded"
-                      >
-                        {mode}
-                      </span>
+                      <span key={mode} className="text-xs px-2 py-1 bg-graphite/50 text-gray-300 rounded">{mode}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Developer / Publisher */}
-              {developers.length > 0 && (
+              {(developers.length > 0 || game.developer) && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Developer</span>
-                  <span className="text-light-text-primary dark:text-dark-text-primary">
-                    {developers.map(d => d.name).join(', ')}
-                  </span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Developer</span>
+                  <span className="text-white font-bold">{developers.length > 0 ? developers.map(d => d.name).join(', ') : game.developer}</span>
                 </div>
               )}
 
-              {publishers.length > 0 && (
+              {(publishers.length > 0 || game.publisher) && (
                 <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Publisher</span>
-                  <span className="text-light-text-primary dark:text-dark-text-primary">
-                    {publishers.map(p => p.name).join(', ')}
-                  </span>
-                </div>
-              )}
-
-              {/* Fallback developer/publisher from RAWG if IGDB companies empty */}
-              {developers.length === 0 && game.developer && (
-                <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Developer</span>
-                  <span className="text-light-text-primary dark:text-dark-text-primary">{game.developer}</span>
-                </div>
-              )}
-
-              {publishers.length === 0 && game.publisher && (
-                <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Publisher</span>
-                  <span className="text-light-text-primary dark:text-dark-text-primary">{game.publisher}</span>
-                </div>
-              )}
-
-              {/* Metacritic */}
-              {game.metacriticScore && (
-                <div>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary block mb-1">Metacritic</span>
-                  <span className={`text-sm font-bold px-2 py-1 rounded ${game.metacriticScore >= 75 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                      game.metacriticScore >= 50 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                        'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                    }`}>
-                    {game.metacriticScore}
-                  </span>
+                  <span className="text-gray-500 block mb-1 font-bold uppercase text-xs">Publisher</span>
+                  <span className="text-white font-bold">{publishers.length > 0 ? publishers.map(p => p.name).join(', ') : game.publisher}</span>
                 </div>
               )}
             </div>
@@ -506,41 +346,12 @@ export const GameDetail = () => {
 
       {/* Screenshot Lightbox */}
       {lightboxOpen && screenshots.length > 0 && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={closeLightbox}
-        >
-          <button
-            className="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 transition-colors z-10"
-            onClick={closeLightbox}
-          >
-            ✕
-          </button>
-
-          <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 transition-colors z-10"
-            onClick={(e) => { e.stopPropagation(); prevImage(); }}
-          >
-            ‹
-          </button>
-
-          <img
-            src={screenshots[lightboxIndex]?.urlHD || screenshots[lightboxIndex]?.url}
-            alt={`Screenshot ${lightboxIndex + 1}`}
-            className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-
-          <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-gray-300 transition-colors z-10"
-            onClick={(e) => { e.stopPropagation(); nextImage(); }}
-          >
-            ›
-          </button>
-
-          <div className="absolute bottom-4 text-white text-sm">
-            {lightboxIndex + 1} / {screenshots.length}
-          </div>
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeLightbox}>
+          <button className="absolute top-4 right-4 text-white text-3xl hover:text-primary transition-colors z-10" onClick={closeLightbox}>✕</button>
+          <button className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-primary transition-colors z-10" onClick={(e) => { e.stopPropagation(); prevImage(); }}>‹</button>
+          <img src={screenshots[lightboxIndex]?.urlHD || screenshots[lightboxIndex]?.url} alt={`Screenshot ${lightboxIndex + 1}`} className="max-w-[90vw] max-h-[85vh] object-contain rounded" onClick={(e) => e.stopPropagation()} />
+          <button className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl hover:text-primary transition-colors z-10" onClick={(e) => { e.stopPropagation(); nextImage(); }}>›</button>
+          <div className="absolute bottom-4 text-gray-400 text-sm font-bold">{lightboxIndex + 1} / {screenshots.length}</div>
         </div>
       )}
     </div>

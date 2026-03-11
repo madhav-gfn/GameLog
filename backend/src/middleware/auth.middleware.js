@@ -21,6 +21,8 @@ export const requireAuth = async (req, res, next) => {
           displayName: true,
           avatar: true,
           bio: true,
+          platformsPlayed: true,
+          isPublic: true,
           createdAt: true,
         },
       });
@@ -45,4 +47,41 @@ export const requireAuth = async (req, res, next) => {
     }
     next(error);
   }
+};
+
+// Optional auth - sets req.user if token present, but doesn't reject if missing
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          displayName: true,
+          avatar: true,
+          bio: true,
+          platformsPlayed: true,
+          isPublic: true,
+          createdAt: true,
+        },
+      });
+
+      if (user) {
+        req.user = user;
+      }
+    } else if (req.user) {
+      // Session-based auth (Google OAuth)
+    }
+  } catch (error) {
+    // Silently ignore auth errors for optional auth
+  }
+
+  next();
 };

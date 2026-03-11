@@ -38,8 +38,17 @@ export async function createReview(req, res, next) {
 
 export async function likeReview(req, res, next) {
     try {
-        const review = await reviewService.likeReview(req.params.reviewId);
-        res.json({ success: true, data: review });
+        const result = await reviewService.likeReview(req.user.id, req.params.reviewId);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function unlikeReview(req, res, next) {
+    try {
+        await reviewService.unlikeReview(req.user.id, req.params.reviewId);
+        res.json({ success: true, message: 'Review unliked' });
     } catch (error) {
         next(error);
     }

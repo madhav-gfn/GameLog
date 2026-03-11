@@ -1,10 +1,10 @@
 import prisma from '../config/database.js';
 
 /**
- * Get game statistics — games per status, completion rate, average rating.
+ * Get game statistics - games per status, completion rate, average rating, total playtime.
  */
 export async function getGameStats(userId) {
-    const [statusGroups, ratingAgg, totalGames] = await Promise.all([
+    const [statusGroups, ratingAgg, totalGames, playtimeAgg] = await Promise.all([
         prisma.userGame.groupBy({
             by: ['status'],
             where: { userId },
@@ -16,6 +16,10 @@ export async function getGameStats(userId) {
             _count: { rating: true },
         }),
         prisma.userGame.count({ where: { userId } }),
+        prisma.userGame.aggregate({
+            where: { userId, playtimeHours: { not: null } },
+            _sum: { playtimeHours: true },
+        }),
     ]);
 
     const statusCounts = statusGroups.reduce((acc, g) => {
@@ -32,11 +36,12 @@ export async function getGameStats(userId) {
         completionRate,
         averageRating: ratingAgg._avg.rating ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
         ratedGamesCount: ratingAgg._count.rating,
+        totalPlaytimeHours: Math.round((playtimeAgg._sum.playtimeHours || 0) * 10) / 10,
     };
 }
 
 /**
- * Get genre breakdown — game count per genre.
+ * Get genre breakdown - game count per genre.
  */
 export async function getGenreBreakdown(userId) {
     const userGames = await prisma.userGame.findMany({

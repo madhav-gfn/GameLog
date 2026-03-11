@@ -35,13 +35,13 @@ export async function getGameDetails(req, res) {
       game = await prisma.game.findUnique({
         where: { id },
         include: {
-          comments: {
-            include: { user: { select: { username: true, avatar: true } } },
+          reviews: {
+            include: { user: { select: { id: true, username: true, avatar: true } } },
             orderBy: { createdAt: 'desc' },
             take: 10,
           },
           _count: {
-            select: { users: true, comments: true },
+            select: { users: true, reviews: true },
           },
         },
       });
@@ -54,13 +54,13 @@ export async function getGameDetails(req, res) {
       game = await prisma.game.findUnique({
         where: { rawgId },
         include: {
-          comments: {
-            include: { user: { select: { username: true, avatar: true } } },
+          reviews: {
+            include: { user: { select: { id: true, username: true, avatar: true } } },
             orderBy: { createdAt: 'desc' },
             take: 10,
           },
           _count: {
-            select: { users: true, comments: true },
+            select: { users: true, reviews: true },
           },
         },
       });
@@ -71,13 +71,13 @@ export async function getGameDetails(req, res) {
           game = await prisma.game.findUnique({
             where: { id: game.id },
             include: {
-              comments: {
-                include: { user: { select: { username: true, avatar: true } } },
+              reviews: {
+                include: { user: { select: { id: true, username: true, avatar: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
               },
               _count: {
-                select: { users: true, comments: true },
+                select: { users: true, reviews: true },
               },
             },
           });
@@ -128,7 +128,7 @@ export async function getGameDetails(req, res) {
 export async function addGameToLibrary(req, res) {
   try {
     const { gameId } = req.params;
-    const { status, rating, review } = req.body;
+    const { status, platform, playtimeHours, progressPercent, rating, reviewText, playedAt, screenshotUrl } = req.body;
     const userId = req.user.id;
 
     const game = await getOrCreateGame(gameId);
@@ -139,33 +139,31 @@ export async function addGameToLibrary(req, res) {
       },
       update: {
         status,
+        platform,
+        playtimeHours,
+        progressPercent,
         rating,
-        review,
+        reviewText,
+        playedAt: playedAt ? new Date(playedAt) : undefined,
+        screenshotUrl,
         updatedAt: new Date(),
       },
       create: {
         userId,
         gameId: game.id,
         status,
+        platform,
+        playtimeHours,
+        progressPercent,
         rating,
-        review,
+        reviewText,
+        playedAt: playedAt ? new Date(playedAt) : null,
+        screenshotUrl,
       },
     });
 
     // Update game stats
     await updateGameStats(game.id);
-
-    // Log activity
-    const activityType = status === 'PLAYING' ? 'STARTED' : 'GAME_ADDED';
-    await prisma.activity.create({
-      data: {
-        userId,
-        gameId: game.id,
-        type: activityType,
-        entityId: userGame.id,
-        metadata: { status },
-      },
-    });
 
     res.json(userGame);
   } catch (error) {
@@ -173,8 +171,105 @@ export async function addGameToLibrary(req, res) {
     res.status(500).json({
       error: 'Failed to add game to library',
       details: error.message,
-      code: error.code || null
+      code: error.code || null,
     });
+  }
+}
+
+// Update game log entry
+export async function updateGameInLibrary(req, res) {
+  try {
+    const { gameId } = req.params;
+    const { status, platform, playtimeHours, progressPercent, rating, reviewText, playedAt, screenshotUrl } = req.body;
+    const userId = req.user.id;
+
+    const game = await getOrCreateGame(gameId);
+
+    const existingLog = await prisma.userGame.findUnique({
+      where: { userId_gameId: { userId, gameId: game.id } },
+    });
+
+    if (!existingLog) {
+      return res.status(404).json({ error: 'Game not found in your library' });
+    }
+
+    const userGame = await prisma.userGame.update({
+      where: { userId_gameId: { userId, gameId: game.id } },
+      data: {
+        status: status ?? existingLog.status,
+        platform: platform !== undefined ? platform : existingLog.platform,
+        playtimeHours: playtimeHours !== undefined ? playtimeHours : existingLog.playtimeHours,
+        progressPercent: progressPercent !== undefined ? progressPercent : existingLog.progressPercent,
+        rating: rating !== undefined ? rating : existingLog.rating,
+        reviewText: reviewText !== undefined ? reviewText : existingLog.reviewText,
+        playedAt: playedAt !== undefined ? (playedAt ? new Date(playedAt) : null) : existingLog.playedAt,
+        screenshotUrl: screenshotUrl !== undefined ? screenshotUrl : existingLog.screenshotUrl,
+      },
+    });
+
+    // Update game stats
+    await updateGameStats(game.id);
+
+    res.json(userGame);
+  } catch (error) {
+    console.error('Error in updateGameInLibrary controller:', error);
+    res.status(500).json({ error: 'Failed to update game log' });
+  }
+}
+
+// Remove game from library
+export async function removeGameFromLibrary(req, res) {
+  try {
+    const { gameId } = req.params;
+    const userId = req.user.id;
+
+    const game = await getOrCreateGame(gameId);
+
+    const existingLog = await prisma.userGame.findUnique({
+      where: { userId_gameId: { userId, gameId: game.id } },
+    });
+
+    if (!existingLog) {
+      return res.status(404).json({ error: 'Game not found in your library' });
+    }
+
+    await prisma.userGame.delete({
+      where: { userId_gameId: { userId, gameId: game.id } },
+    });
+
+    // Update game stats
+    await updateGameStats(game.id);
+
+    res.json({ success: true, message: 'Game removed from library' });
+  } catch (error) {
+    console.error('Error in removeGameFromLibrary controller:', error);
+    res.status(500).json({ error: 'Failed to remove game from library' });
+  }
+}
+
+// Get user's log for a specific game
+export async function getUserGameLog(req, res) {
+  try {
+    const { gameId } = req.params;
+    const userId = req.user.id;
+
+    const game = await getOrCreateGame(gameId);
+
+    const userGame = await prisma.userGame.findUnique({
+      where: { userId_gameId: { userId, gameId: game.id } },
+      include: {
+        game: true,
+      },
+    });
+
+    if (!userGame) {
+      return res.json({ logged: false, data: null });
+    }
+
+    res.json({ logged: true, data: userGame });
+  } catch (error) {
+    console.error('Error in getUserGameLog controller:', error);
+    res.status(500).json({ error: 'Failed to fetch game log' });
   }
 }
 

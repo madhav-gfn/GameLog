@@ -3,11 +3,13 @@ import { LoadingSkeleton } from './LoadingSkeleton';
 
 export const Header = ({ title, subtitle }) => {
   return (
-    <div className="mb-8">
-      <h1 className="text-4xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+    <div className="mb-8 border-b-4 border-primary pb-4">
+      <h1 className="text-4xl sm:text-5xl font-bold uppercase tracking-tighter text-white">
         {title}
       </h1>
-      {subtitle && <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-primary font-bold uppercase tracking-widest mt-2 text-lg">{subtitle}</p>
+      )}
     </div>
   );
 };
@@ -16,8 +18,8 @@ export const EmptyState = ({ icon, title, description }) => {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="text-6xl mb-4">{icon}</div>
-      <h3 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">{title}</h3>
-      <p className="text-light-text-tertiary dark:text-dark-text-tertiary text-sm max-w-sm">{description}</p>
+      <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-2">{title}</h3>
+      <p className="text-gray-500 text-sm max-w-sm">{description}</p>
     </div>
   );
 };

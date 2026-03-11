@@ -12,40 +12,35 @@ export const Discover = () => {
   const [platforms, setPlatforms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const [selectedGenre, setSelectedGenre] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [sortBy, setSortBy] = useState('rating');
 
-  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // Fetch games
+
         const gameData = await gameApi.getGames({ sortBy });
         setGames(gameData.games || []);
 
-        // Fetch genres and platforms
         const genreData = await gameApi.getGenres();
         const platformData = await gameApi.getPlatforms();
-        
+
         setGenres(genreData.genres || []);
         setPlatforms(platformData.platforms || []);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to load games. Please make sure the backend is running.');
+        setError('Failed to load games. Make sure the backend is running.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
-  // Handle filter/sort changes
   useEffect(() => {
     const fetchFilteredGames = async () => {
       try {
@@ -63,19 +58,16 @@ export const Discover = () => {
         setLoading(false);
       }
     };
-
     fetchFilteredGames();
   }, [selectedGenre, selectedPlatform, sortBy]);
 
   return (
     <div>
-      <Header
-        title="Discover Games"
-        subtitle="Browse the latest and greatest games"
-      />
+      <Header title="Discover" subtitle="Browse the latest and greatest games" />
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
+        <div className="mb-6 p-4 bg-crimson/10 border-2 border-crimson rounded text-crimson font-bold text-sm">
+          <span className="material-symbols-outlined text-sm align-middle mr-2">warning</span>
           {error}
         </div>
       )}
@@ -83,51 +75,41 @@ export const Discover = () => {
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div>
-          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-            Genre
-          </label>
+          <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Genre</label>
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
-            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
+            className="w-full px-3 py-2 bg-navy border-2 border-graphite rounded text-white font-bold uppercase text-sm focus:outline-none focus:border-primary transition-colors"
             disabled={loading || genres.length === 0}
           >
             <option value="">All Genres</option>
             {genres.map((genre) => (
-              <option key={genre.id} value={genre.name}>
-                {genre.name}
-              </option>
+              <option key={genre.id} value={genre.name}>{genre.name}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-            Platform
-          </label>
+          <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Platform</label>
           <select
             value={selectedPlatform}
             onChange={(e) => setSelectedPlatform(e.target.value)}
-            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
+            className="w-full px-3 py-2 bg-navy border-2 border-graphite rounded text-white font-bold uppercase text-sm focus:outline-none focus:border-primary transition-colors"
             disabled={loading || platforms.length === 0}
           >
             <option value="">All Platforms</option>
             {platforms.map((platform) => (
-              <option key={platform.id} value={platform.name}>
-                {platform.name}
-              </option>
+              <option key={platform.id} value={platform.name}>{platform.name}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
-            Sort by
-          </label>
+          <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Sort By</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="w-full px-3 py-2 bg-light-bg-card dark:bg-dark-bg-card border border-light-border-default dark:border-dark-border-default rounded-lg text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
+            className="w-full px-3 py-2 bg-navy border-2 border-graphite rounded text-white font-bold uppercase text-sm focus:outline-none focus:border-primary transition-colors"
             disabled={loading}
           >
             <option value="rating">Rating</option>
@@ -156,7 +138,8 @@ export const Discover = () => {
 
           {games.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-light-text-tertiary dark:text-dark-text-tertiary text-lg">No games found with those filters.</p>
+              <span className="material-symbols-outlined text-graphite text-6xl mb-4 block">search_off</span>
+              <p className="text-gray-500 font-bold uppercase tracking-wider">No games found with those filters</p>
             </div>
           )}
         </>

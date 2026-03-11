@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header, LoadingSkeleton } from '../components/Layout';
-import { GameCard } from '../components/GameCard';
 import { useAuth } from '../contexts/AuthContext';
-
-import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { userApi } from '../api/userApi';
+import { analyticsApi } from '../api/analyticsApi';
 import { ListsManager } from '../components/ListsManager';
 
 export const Profile = () => {
@@ -13,65 +11,41 @@ export const Profile = () => {
   const [activeTab, setActiveTab] = useState('Overview');
   const [userLibrary, setUserLibrary] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user || !user.id) {
+      if (!user?.id) {
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
 
-        // Fetch library data
-        const libraryResponse = await fetch(`http://localhost:5000/api/users/${user.id}/library`, {
-          credentials: 'include',
-        });
-        if (!libraryResponse.ok) throw new Error('Failed to fetch library');
-        const libraryData = await libraryResponse.json();
-        // Backend returns { games: [UserGame objects with nested game], pagination: {} }
-        const userGames = libraryData.games || [];
-        setUserLibrary(userGames);
+        const [libraryRes, profileRes, analyticsRes] = await Promise.allSettled([
+          userApi.getUserLibrary(user.id),
+          userApi.getUserProfile(user.id),
+          analyticsApi.getOverview(),
+        ]);
 
-        // Fetch full user profile with stats
-        try {
-          const profileResponse = await fetch(`http://localhost:5000/api/users/${user.id}`, {
-            credentials: 'include',
-          });
-          if (profileResponse.ok) {
-            const profileData = await profileResponse.json();
-            setUserProfile({
-              username: profileData.username || profileData.displayName || user.email?.split('@')[0] || 'Player',
-              avatar: profileData.avatar || user.avatar || '👾',
-              bio: profileData.bio || 'No bio yet',
-              followers: profileData._count?.followers || 0,
-              following: profileData._count?.following || 0,
-              favoriteGenres: profileData.favoriteGenres || [],
-            });
-          } else {
-            // Fallback to auth user data
-            setUserProfile({
-              username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
-              avatar: user.avatar || '👾',
-              bio: user.bio || 'No bio yet',
-              followers: 0,
-              following: 0,
-              favoriteGenres: [],
-            });
-          }
-        } catch {
-          // Fallback to auth user data
+        if (libraryRes.status === 'fulfilled') {
+          setUserLibrary(libraryRes.value.games || []);
+        }
+
+        if (profileRes.status === 'fulfilled') {
+          setUserProfile(profileRes.value);
+        } else {
           setUserProfile({
             username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
-            avatar: user.avatar || '👾',
+            avatar: user.avatar || null,
             bio: user.bio || 'No bio yet',
-            followers: 0,
-            following: 0,
-            favoriteGenres: [],
           });
+        }
+
+        if (analyticsRes.status === 'fulfilled') {
+          setAnalytics(analyticsRes.value?.data || analyticsRes.value);
         }
 
         setError(null);
@@ -82,15 +56,24 @@ export const Profile = () => {
         setLoading(false);
       }
     };
-
     fetchUserData();
   }, [user]);
 
   if (loading) {
     return (
       <div>
-        <Header title="Profile" subtitle="Your gaming profile" />
-        <LoadingSkeleton />
+        <header className="mb-8 border-b-4 border-primary pb-4">
+          <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
+        </header>
+        <div className="bg-navy border-2 border-graphite rounded p-8 animate-pulse">
+          <div className="flex gap-6">
+            <div className="w-24 h-24 bg-graphite rounded-full" />
+            <div className="space-y-3 flex-1">
+              <div className="h-8 bg-graphite rounded w-48" />
+              <div className="h-4 bg-graphite rounded w-32" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -98,99 +81,103 @@ export const Profile = () => {
   if (error || !userProfile) {
     return (
       <div>
-        <Header title="Profile" subtitle="Your gaming profile" />
-        <div className="text-center py-12 text-gray-400">
-          {error || 'Unable to load profile'}
+        <header className="mb-8 border-b-4 border-primary pb-4">
+          <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
+        </header>
+        <div className="text-center py-12">
+          <span className="material-symbols-outlined text-crimson text-6xl mb-4 block">error</span>
+          <p className="text-gray-400">{error || 'Unable to load profile'}</p>
         </div>
       </div>
     );
   }
 
-  // Transform UserGame objects to include game data at top level for easier access
-  const transformedLibrary = Array.isArray(userLibrary)
-    ? userLibrary.map((userGame) => ({
-      ...userGame.game,
-      id: userGame.gameId,
-      rawgId: userGame.game?.rawgId || userGame.gameId,
-      status: userGame.status,
-      rating: userGame.rating,
-      review: userGame.review,
-      updatedAt: userGame.updatedAt,
-    }))
-    : [];
+  const displayName = userProfile.displayName || userProfile.username || user?.email?.split('@')[0] || 'Player';
+  const avatarUrl = userProfile.avatar || user?.avatar;
+  const avatarLetter = displayName[0]?.toUpperCase() || 'P';
 
-  const recentGames = transformedLibrary
+  const followerCount = userProfile.stats?.followers || userProfile._count?.followers || 0;
+  const followingCount = userProfile.stats?.following || userProfile._count?.following || 0;
+
+  const gameStats = analytics?.games || {};
+
+  // Transform UserGame objects for display
+  const transformedLibrary = userLibrary.map((ug) => ({
+    ...ug.game,
+    id: ug.gameId,
+    rawgId: ug.game?.rawgId || ug.gameId,
+    status: ug.status,
+    rating: ug.rating,
+    updatedAt: ug.updatedAt,
+  }));
+
+  const recentGames = [...transformedLibrary]
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-    .slice(0, 4);
+    .slice(0, 6);
 
-
+  const tabs = ['Overview', 'Library', 'Lists'];
 
   return (
     <div>
-      {/* Profile Header */}
-      <div className="card p-8 mb-8">
-        <div className="flex items-start justify-between">
-          <div className="flex gap-6">
-            <div className="flex-shrink-0">
-              {userProfile.avatar && userProfile.avatar.startsWith('http') ? (
-                <img
-                  src={userProfile.avatar}
-                  alt={userProfile.username}
-                  className="w-24 h-24 rounded-full object-cover border-2 border-light-border-default dark:border-dark-border-default"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <div
-                className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-light-accent-primary dark:bg-dark-accent-primary text-white border-2 border-light-border-default dark:border-dark-border-default ${userProfile.avatar && userProfile.avatar.startsWith('http') ? 'hidden' : ''
-                  }`}
-              >
-                {userProfile.avatar && !userProfile.avatar.startsWith('http')
-                  ? userProfile.avatar
-                  : userProfile.username?.[0]?.toUpperCase() || 'U'}
-              </div>
+      <header className="mb-8 border-b-4 border-primary pb-4">
+        <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
+        <p className="text-primary font-bold uppercase tracking-widest mt-2 text-lg">YOUR STATS</p>
+      </header>
+
+      {/* Profile Card */}
+      <div className="bg-navy border-2 border-graphite rounded p-8 mb-8">
+        <div className="flex items-start gap-6">
+          <div className="flex-shrink-0">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-24 h-24 rounded-full object-cover border-2 border-primary"
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+              />
+            ) : null}
+            <div
+              className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-primary text-navy font-bold border-2 border-white ${avatarUrl ? 'hidden' : ''}`}
+            >
+              {avatarLetter}
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
-                {userProfile.username}
-              </h1>
-              <p className="text-light-text-secondary dark:text-dark-text-secondary mb-4">{userProfile.bio}</p>
-              <div className="flex gap-6 text-sm">
-                <div>
-                  <span className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">
-                    {userProfile.followers}
-                  </span>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary ml-2">followers</span>
-                </div>
-                <div>
-                  <span className="font-semibold text-light-accent-secondary dark:text-dark-accent-secondary">
-                    {userProfile.following}
-                  </span>
-                  <span className="text-light-text-tertiary dark:text-dark-text-tertiary ml-2">following</span>
-                </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white uppercase tracking-wider mb-2">{displayName}</h1>
+            <p className="text-gray-400 mb-4">{userProfile.bio || 'No bio yet'}</p>
+            <div className="flex gap-6 text-sm">
+              <div>
+                <span className="font-bold text-primary">{followerCount}</span>
+                <span className="text-gray-500 ml-2 uppercase font-bold">followers</span>
+              </div>
+              <div>
+                <span className="font-bold text-primary">{followingCount}</span>
+                <span className="text-gray-500 ml-2 uppercase font-bold">following</span>
+              </div>
+              <div>
+                <span className="font-bold text-primary">{gameStats.totalGames || 0}</span>
+                <span className="text-gray-500 ml-2 uppercase font-bold">games</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Profile Content Tabs */}
-      <div className="mb-6 border-b border-light-border-default dark:border-dark-border-default">
+      {/* Tabs */}
+      <div className="mb-6 border-b-2 border-graphite">
         <div className="flex gap-8">
-          {['Overview', 'Library', 'Lists'].map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === tab
-                ? 'text-light-accent-primary dark:text-dark-accent-primary'
-                : 'text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary'
+              className={`pb-4 px-2 font-bold uppercase tracking-wider transition-colors relative ${activeTab === tab
+                  ? 'text-primary'
+                  : 'text-gray-500 hover:text-white'
                 }`}
             >
               {tab}
               {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-light-accent-primary dark:bg-dark-accent-primary rounded-t-full" />
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full" />
               )}
             </button>
           ))}
@@ -201,26 +188,57 @@ export const Profile = () => {
       <div className="space-y-8">
         {activeTab === 'Overview' && (
           <>
-            <AnalyticsDashboard />
+            {/* Analytics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Games', value: gameStats.totalGames || 0, icon: 'sports_esports' },
+                { label: 'Completed', value: gameStats.statusCounts?.COMPLETED || 0, icon: 'emoji_events' },
+                { label: 'Completion', value: `${gameStats.completionRate || 0}%`, icon: 'percent' },
+                { label: 'Avg Rating', value: gameStats.averageRating ? `${gameStats.averageRating}/10` : 'N/A', icon: 'star' },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-navy border-2 border-graphite rounded p-4 text-center">
+                  <span className="material-symbols-outlined text-primary text-2xl mb-2 block">{stat.icon}</span>
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mt-1">{stat.label}</p>
+                </div>
+              ))}
+            </div>
 
-            {/* Recently Played */}
-            <div className="mt-8">
-              <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-6">
-                Recently Played
-              </h2>
+            {/* Recent Games */}
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-wider mb-6">Recently Updated</h2>
               {recentGames.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {recentGames.map((game) => (
-                    <GameCard
+                    <div
                       key={game.id || game.rawgId}
-                      game={game}
-                      compact
                       onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
-                    />
+                      className="cursor-pointer group"
+                    >
+                      <div className="aspect-[3/4] rounded overflow-hidden border-2 border-graphite group-hover:border-primary transition-colors bg-graphite">
+                        <img
+                          src={game.coverImage}
+                          alt={game.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="128"%3E%3Crect fill="%232d3748" width="96" height="128"/%3E%3C/svg%3E';
+                          }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs font-bold text-white truncate uppercase group-hover:text-primary transition-colors">
+                        {game.title}
+                      </p>
+                      <span className={`text-xs font-bold uppercase ${game.status === 'COMPLETED' ? 'text-primary' :
+                          game.status === 'ABANDONED' ? 'text-crimson' :
+                            'text-gray-500'
+                        }`}>
+                        {game.status}
+                      </span>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
+                <div className="text-center py-12 text-gray-500">
                   No games played yet. Start tracking your games!
                 </div>
               )}
@@ -229,16 +247,33 @@ export const Profile = () => {
         )}
 
         {activeTab === 'Library' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {transformedLibrary.map((game) => (
-              <GameCard
+              <div
                 key={game.id || game.rawgId}
-                game={game}
                 onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
-              />
+                className="cursor-pointer group bg-navy border-2 border-graphite rounded overflow-hidden hover:border-primary transition-colors"
+              >
+                <div className="aspect-video bg-graphite">
+                  <img
+                    src={game.coverImage}
+                    alt={game.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="256" height="144"%3E%3Crect fill="%232d3748" width="256" height="144"/%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+                <div className="p-3">
+                  <h3 className="text-sm font-bold text-white truncate uppercase group-hover:text-primary transition-colors">
+                    {game.title}
+                  </h3>
+                  {game.rating && <span className="text-xs text-primary font-bold">★ {game.rating}/10</span>}
+                </div>
+              </div>
             ))}
             {transformedLibrary.length === 0 && (
-              <div className="col-span-full text-center py-12 text-light-text-tertiary dark:text-dark-text-tertiary">
+              <div className="col-span-full text-center py-12 text-gray-500">
                 Your library is empty.
               </div>
             )}
@@ -246,7 +281,7 @@ export const Profile = () => {
         )}
 
         {activeTab === 'Lists' && (
-          <ListsManager userId={userProfile.id || user.id} />
+          <ListsManager userId={user.id} />
         )}
       </div>
     </div>

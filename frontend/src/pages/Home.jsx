@@ -1,100 +1,217 @@
 import React, { useState, useEffect } from 'react';
-import { SearchBar } from '../components/SearchBar';
-import { TrendingCarousel } from '../components/TrendingCarousel';
-import { TopRated } from '../components/TopRated';
-import { LoadingSkeleton } from '../components/LoadingSkeleton';
-import { SocialFeed } from '../components/SocialFeed';
-import { gameApi } from '../api/gameApi';
+import { useNavigate } from 'react-router-dom';
+import { SessionCard } from '../components/SessionCard';
+import { useAuth } from '../contexts/AuthContext';
+import { userApi } from '../api/userApi';
+
+// Map GameStatus to SessionCard result type
+const statusToResult = {
+  COMPLETED: 'victory',
+  ABANDONED: 'defeat',
+  PLAYING: 'progress',
+  BACKLOG: 'progress',
+  PAUSED: 'progress',
+  WISHLIST: 'progress',
+};
+
+// Map GameStatus to human-friendly label
+const statusLabel = {
+  COMPLETED: 'COMPLETED',
+  ABANDONED: 'DROPPED',
+  PLAYING: 'PLAYING',
+  BACKLOG: 'BACKLOG',
+  PAUSED: 'PAUSED',
+  WISHLIST: 'WISHLIST',
+};
+
+// Format date as time ago
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
 
 export const Home = () => {
-  const [trendingGames, setTrendingGames] = useState([]);
-  const [topRatedGames, setTopRatedGames] = useState([]);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    const fetchHomeData = async () => {
+    const fetchLibrary = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
-
-        // Fetch trending games (sorted by popularity or recent)
-        const trendingData = await gameApi.getGames({ sortBy: 'popularity', page: 1 });
-        setTrendingGames(trendingData.games?.slice(0, 10) || []);
-
-        // Fetch top rated games
-        const topRatedData = await gameApi.getGames({ sortBy: 'rating', page: 1 });
-        setTopRatedGames(topRatedData.games?.slice(0, 4) || []);
+        const data = await userApi.getUserLibrary(user.id);
+        setGames(data.games || []);
       } catch (err) {
-        console.error('Failed to fetch home data:', err);
-        setError('Failed to load games');
+        console.error('Failed to fetch library:', err);
+        setError('Failed to load your games');
       } finally {
         setLoading(false);
       }
     };
+    fetchLibrary();
+  }, [user]);
 
-    fetchHomeData();
-  }, []);
+  // Filter games
+  const filteredGames = games.filter((g) => {
+    if (filter === 'completed') return g.status === 'COMPLETED';
+    if (filter === 'playing') return g.status === 'PLAYING';
+    if (filter === 'backlog') return g.status === 'BACKLOG';
+    return true;
+  });
+
+  // Sort by most recently updated
+  const sortedGames = [...filteredGames].sort(
+    (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+  );
+
+  const filterButtons = [
+    { key: 'all', label: 'ALL' },
+    { key: 'playing', label: 'PLAYING' },
+    { key: 'completed', label: 'COMPLETED' },
+    { key: 'backlog', label: 'BACKLOG' },
+  ];
 
   return (
     <div>
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
-          GameFolio:
-        </h1>
-        <p className="text-lg text-light-text-secondary dark:text-dark-text-secondary mb-6">
-          Your Cozy Corner for Gaming Culture
-        </p>
-        <SearchBar className="max-w-2xl" />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Trending Now */}
-        <div className="lg:col-span-2">
-          {loading ? (
-            <div className="space-y-4">
-              <LoadingSkeleton count={3} />
-            </div>
-          ) : error ? (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400">
-              {error}
-            </div>
-          ) : (
-            <TrendingCarousel games={trendingGames} title="Trending Now" />
-          )}
+      {/* Header */}
+      <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-primary pb-4 gap-4">
+        <div>
+          <h2 className="text-4xl sm:text-5xl font-bold uppercase tracking-tighter text-white">
+            My Games
+          </h2>
+          <p className="text-primary font-bold uppercase tracking-widest mt-2 text-lg">
+            YOUR LIBRARY
+          </p>
         </div>
+        <div className="flex gap-2 flex-wrap">
+          {filterButtons.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`px-4 py-2 rounded font-bold uppercase text-sm transition-colors ${filter === f.key
+                  ? 'bg-primary text-navy'
+                  : 'bg-graphite text-white hover:bg-navy'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
-        {/* Right Column - Social & Top Rated */}
-        <div className="lg:col-span-1 space-y-8">
-          {/* Social Feed */}
-          <div>
-            <h2 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
-              Community Activity
-            </h2>
-            <SocialFeed />
-          </div>
-
-          {/* Top Rated */}
-          <div>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="card p-3 animate-pulse">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-light-bg-secondary dark:bg-dark-bg-secondary" />
-                      <div className="flex-1 h-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded" />
-                    </div>
-                  </div>
-                ))}
+      {/* Loading */}
+      {loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-navy border-2 border-graphite rounded overflow-hidden animate-pulse">
+              <div className="aspect-video bg-graphite" />
+              <div className="p-5 space-y-3">
+                <div className="h-6 bg-graphite rounded w-2/3" />
+                <div className="h-4 bg-graphite rounded w-1/2" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="h-16 bg-graphite/30 rounded" />
+                  <div className="h-16 bg-graphite/30 rounded" />
+                </div>
               </div>
-            ) : error ? null : (
-              <TopRated games={topRatedGames} title="Top Rated" />
-            )}
-          </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="text-center py-16">
+          <span className="material-symbols-outlined text-crimson text-6xl mb-4 block">error</span>
+          <p className="text-gray-400 font-bold uppercase tracking-wider">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-primary text-navy rounded font-bold uppercase text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Games Grid */}
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {sortedGames.map((userGame) => {
+              const game = userGame.game || {};
+              return (
+                <div key={userGame.id} onClick={() => navigate(`/game/${game.rawgId || userGame.gameId}`)} className="cursor-pointer">
+                  <SessionCard
+                    title={game.title || 'Unknown Game'}
+                    image={game.coverImage || ''}
+                    imageAlt={game.title || 'Game cover'}
+                    result={statusToResult[userGame.status] || 'progress'}
+                    timeAgo={timeAgo(userGame.updatedAt)}
+                    platform={game.platforms?.[0] || 'PC'}
+                    description={[
+                      statusLabel[userGame.status],
+                      ...(game.genres?.slice(0, 2) || []),
+                    ].join(' • ')}
+                    stats={[
+                      {
+                        label: 'Status',
+                        value: statusLabel[userGame.status] || userGame.status,
+                        color: userGame.status === 'COMPLETED' ? 'primary' : userGame.status === 'ABANDONED' ? 'crimson' : undefined,
+                      },
+                      {
+                        label: 'Rating',
+                        value: userGame.rating ? `${userGame.rating}/10` : 'N/A',
+                        highlight: !!userGame.rating,
+                        color: userGame.rating ? 'primary' : undefined,
+                      },
+                    ]}
+                    footer={{
+                      left: (
+                        <span className="text-xs font-bold uppercase text-gray-500">
+                          {game.developer || game.platforms?.join(', ') || ''}
+                        </span>
+                      ),
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {sortedGames.length === 0 && (
+            <div className="text-center py-16">
+              <span className="material-symbols-outlined text-graphite text-6xl mb-4 block">sports_esports</span>
+              <p className="text-gray-500 font-bold uppercase tracking-wider mb-2">
+                {filter === 'all' ? 'No games in your library yet' : `No ${filter} games`}
+              </p>
+              <p className="text-gray-600 text-sm mb-4">Start by discovering and adding games to your collection</p>
+              <button
+                onClick={() => navigate('/discover')}
+                className="px-6 py-3 bg-primary text-navy rounded font-bold uppercase text-sm hover:bg-yellow-400 transition-colors"
+              >
+                Discover Games
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

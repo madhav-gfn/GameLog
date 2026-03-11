@@ -1,20 +1,20 @@
 import express from 'express';
-import { getGameReviews, getUserReviews, createReview, likeReview, getReviewStats } from '../controllers/review.controller.js';
+import { getGameReviews, getUserReviews, createReview, likeReview, unlikeReview, getReviewStats } from '../controllers/review.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 
 const router = express.Router();
 
-// GET /api/reviews/game/:gameId — get reviews for a game (public)
+// GET /api/reviews/game/:gameId - get reviews for a game (public)
 router.get('/game/:gameId', getGameReviews);
 
-// GET /api/reviews/game/:gameId/stats — get review stats (public)
+// GET /api/reviews/game/:gameId/stats - get review stats (public)
 router.get('/game/:gameId/stats', getReviewStats);
 
-// GET /api/reviews/user/:userId — get reviews by a user (public)
+// GET /api/reviews/user/:userId - get reviews by a user (public)
 router.get('/user/:userId', getUserReviews);
 
-// POST /api/reviews/game/:gameId — create/update review (protected)
+// POST /api/reviews/game/:gameId - create/update review (protected)
 router.post('/game/:gameId',
     requireAuth,
     validate({
@@ -26,7 +26,10 @@ router.post('/game/:gameId',
     createReview
 );
 
-// POST /api/reviews/:reviewId/like — like a review (protected)
+// POST /api/reviews/:reviewId/like - like a review (protected)
 router.post('/:reviewId/like', requireAuth, likeReview);
+
+// DELETE /api/reviews/:reviewId/like - unlike a review (protected)
+router.delete('/:reviewId/like', requireAuth, unlikeReview);
 
 export default router;

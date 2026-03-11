@@ -22,9 +22,19 @@ export async function followUser(followerId, followingId) {
         const follow = await prisma.follow.create({
             data: { followerId, followingId },
         });
+
+        // Create notification for the followed user
+        await prisma.notification.create({
+            data: {
+                userId: followingId,
+                type: 'NEW_FOLLOWER',
+                fromUserId: followerId,
+            },
+        });
+
         return follow;
     } catch (err) {
-        // Unique constraint — already following
+        // Unique constraint - already following
         if (err.code === 'P2002') {
             const error = new Error('Already following this user');
             error.statusCode = 409;
@@ -117,7 +127,8 @@ export async function isFollowing(followerId, followingId) {
 }
 
 /**
- * Get social feed — activities from users the caller follows, paginated.
+ * Get social feed - recent activity from users the caller follows.
+ * Queries UserGame logs and Reviews instead of Activity model.
  */
 export async function getSocialFeed(userId, page = 1, limit = 20) {
     // Get IDs of followed users
@@ -135,48 +146,70 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
         };
     }
 
-    const where = { userId: { in: followingIds } };
-
-    const [activities, total] = await Promise.all([
-        prisma.activity.findMany({
-            where,
+    // Fetch recent game logs and reviews from followed users in parallel
+    const [recentLogs, recentReviews] = await Promise.all([
+        prisma.userGame.findMany({
+            where: { userId: { in: followingIds } },
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
                 game: { select: { id: true, title: true, coverImage: true } },
             },
-            orderBy: { createdAt: 'desc' },
-            skip: (page - 1) * limit,
-            take: limit,
+            orderBy: { updatedAt: 'desc' },
+            take: limit * 2, // Fetch extra to merge with reviews
         }),
-        prisma.activity.count({ where }),
+        prisma.review.findMany({
+            where: { userId: { in: followingIds } },
+            include: {
+                user: { select: { id: true, username: true, displayName: true, avatar: true } },
+                game: { select: { id: true, title: true, coverImage: true } },
+                _count: { select: { likes: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit * 2,
+        }),
     ]);
 
-    // Enrich REVIEW activities with actual review content and rating
-    const enriched = await Promise.all(
-        activities.map(async (activity) => {
-            if (activity.type === 'REVIEW' && activity.entityId) {
-                const [comment, userGame] = await Promise.all([
-                    prisma.comment.findUnique({
-                        where: { id: activity.entityId },
-                        select: { content: true },
-                    }),
-                    activity.gameId ? prisma.userGame.findFirst({
-                        where: { userId: activity.userId, gameId: activity.gameId },
-                        select: { rating: true },
-                    }) : Promise.resolve(null),
-                ]);
-                return {
-                    ...activity,
-                    reviewContent: comment?.content || null,
-                    reviewRating: userGame?.rating || null,
-                };
-            }
-            return activity;
-        })
-    );
+    // Transform into unified feed items
+    const feedItems = [];
+
+    for (const log of recentLogs) {
+        feedItems.push({
+            type: 'LOG',
+            id: log.id,
+            user: log.user,
+            game: log.game,
+            status: log.status,
+            platform: log.platform,
+            playtimeHours: log.playtimeHours,
+            progressPercent: log.progressPercent,
+            rating: log.rating,
+            reviewText: log.reviewText,
+            timestamp: log.updatedAt,
+        });
+    }
+
+    for (const review of recentReviews) {
+        feedItems.push({
+            type: 'REVIEW',
+            id: review.id,
+            user: review.user,
+            game: review.game,
+            content: review.content,
+            rating: review.rating,
+            likeCount: review._count.likes,
+            timestamp: review.createdAt,
+        });
+    }
+
+    // Sort by timestamp descending and paginate
+    feedItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    const total = feedItems.length;
+    const start = (page - 1) * limit;
+    const paged = feedItems.slice(start, start + limit);
 
     return {
-        activities: enriched,
+        activities: paged,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
 }

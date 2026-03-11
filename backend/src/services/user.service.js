@@ -13,29 +13,60 @@ export async function getUserById(id) {
           followers: true,
           following: true,
           games: true,
+          lists: true,
+          reviews: true,
         },
       },
     },
   });
 }
 
-export async function getUserStats(userId) {
-  const stats = await prisma.userGame.groupBy({
-    by: ['status'],
-    where: { userId },
-    _count: { status: true },
-  });
-
-  const totalHours = await prisma.playSession.aggregate({
-    where: { userId },
-    _sum: { durationMinutes: true },
-  });
+export async function getUserStatsData(userId) {
+  const [statusGroups, totalPlaytime, recentGames] = await Promise.all([
+    // Games per status
+    prisma.userGame.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { status: true },
+    }),
+    // Total playtime from UserGame.playtimeHours
+    prisma.userGame.aggregate({
+      where: { userId, playtimeHours: { not: null } },
+      _sum: { playtimeHours: true },
+    }),
+    // Recent games (last 5)
+    prisma.userGame.findMany({
+      where: { userId },
+      include: {
+        game: { select: { id: true, title: true, coverImage: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+    }),
+  ]);
 
   return {
-    statusCounts: stats.reduce((acc, stat) => {
+    statusCounts: statusGroups.reduce((acc, stat) => {
       acc[stat.status] = stat._count.status;
       return acc;
     }, {}),
-    totalHours: Math.round((totalHours._sum.durationMinutes || 0) / 60),
+    totalPlaytimeHours: Math.round((totalPlaytime._sum.playtimeHours || 0) * 10) / 10,
+    totalGamesLogged: statusGroups.reduce((sum, s) => sum + s._count.status, 0),
+    recentGames,
   };
+}
+
+export async function updateUserProfile(userId, data) {
+  const updateData = {};
+
+  if (data.displayName !== undefined) updateData.displayName = data.displayName;
+  if (data.bio !== undefined) updateData.bio = data.bio;
+  if (data.avatar !== undefined) updateData.avatar = data.avatar;
+  if (data.platformsPlayed !== undefined) updateData.platformsPlayed = data.platformsPlayed;
+  if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+  });
 }

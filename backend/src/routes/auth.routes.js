@@ -56,30 +56,32 @@ router.post('/signin',
 
 router.post('/signout', signout);
 
-// Google OAuth Routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Google OAuth Routes (only if configured)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/login?error=google_auth_failed` }),
-  (req, res) => {
-    // Generate a JWT token for the Google-authenticated user
-    const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+  router.get('/google/callback',
+    passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/login?error=google_auth_failed` }),
+    (req, res) => {
+      // Generate a JWT token for the Google-authenticated user
+      const token = jwt.sign({ userId: req.user.id }, JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN,
+      });
 
-    // Remove sensitive fields before encoding user data
-    const { passwordHash, ...safeUser } = req.user;
+      // Remove sensitive fields before encoding user data
+      const { passwordHash, ...safeUser } = req.user;
 
-    // Redirect to frontend with token in query params
-    const userParam = encodeURIComponent(JSON.stringify(safeUser));
-    res.redirect(`${FRONTEND_URL}?token=${token}&user=${userParam}`);
-  }
-);
+      // Redirect to frontend with token in query params
+      const userParam = encodeURIComponent(JSON.stringify(safeUser));
+      res.redirect(`${FRONTEND_URL}?token=${token}&user=${userParam}`);
+    }
+  );
 
-// Legacy logout (for Google OAuth sessions)
-router.post('/logout', (req, res) => {
-  req.logout(() => res.json({ success: true }));
-});
+  // Legacy logout (for Google OAuth sessions)
+  router.post('/logout', (req, res) => {
+    req.logout(() => res.json({ success: true }));
+  });
+}
 
 // Get current user (works with both JWT and session)
 router.get('/me', requireAuth, (req, res) => {

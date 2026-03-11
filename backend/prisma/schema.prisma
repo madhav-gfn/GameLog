@@ -11,73 +11,66 @@ enum GameStatus {
   WISHLIST
   BACKLOG
   PLAYING
-  PAUSED
+  PLAYED
   COMPLETED
   ABANDONED
 }
 
-enum ActivityType {
-  STARTED
-  COMPLETED
-  REVIEW
-  COMMENT
-  SESSION
-  LIST_CREATED
-  GAME_ADDED
-}
-
-enum ListType {
-  CUSTOM
-  FAVORITES
-  RECOMMENDATIONS
-  YEAR_END
+enum NotificationType {
+  LIKE
+  NEW_FOLLOWER
 }
 
 model User {
-  id            String      @id @default(uuid())
-  googleId      String?     @unique
-  username      String      @unique
-  email         String      @unique
-  passwordHash  String?
-  displayName   String?
-  bio           String?
-  avatar        String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String   @id @default(uuid())
+  googleId        String?  @unique
+  username        String   @unique
+  email           String   @unique
+  passwordHash    String?
+  displayName     String?
+  bio             String?
+  avatar          String?
+  platformsPlayed String[] @default([])
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   games         UserGame[]
-  comments      Comment[]
   lists         GameList[]
-  activities    Activity[]
+  reviews       Review[]
+  likes         Like[]
+  notifications Notification[]
 
-  following     Follow[]    @relation("Following")
-  followers     Follow[]    @relation("Followers")
+  following Follow[] @relation("Following")
+  followers Follow[] @relation("Followers")
 
   @@index([username])
   @@index([createdAt])
 }
 
 model Game {
-  id              String      @id @default(uuid())
-  rawgId          Int         @unique
-  igdbId          Int?        @unique
-  title           String
-  description     String?
-  coverImage      String?
-  releaseDate     DateTime?
-  genres          String[]    @default([])
-  platforms       String[]    @default([])
-  developer       String?
-  publisher       String?
-  avgRating       Float       @default(0)
-  ratingCount     Int         @default(0)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id          String    @id @default(uuid())
+  rawgId      Int       @unique
+  igdbId      Int?      @unique
+  title       String
+  slug        String?
+  description String?
+  coverImage  String?
+  releaseDate DateTime?
+  genres      String[]  @default([])
+  platforms   String[]  @default([])
+  developer   String?
+  publisher   String?
+  storeLinks  Json?
+  esrbRating  String?
+  avgRating   Float     @default(0)
+  ratingCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  users           UserGame[]
-  comments        Comment[]
-  listItems       GameListItem[]
-  activities      Activity[]
+  users     UserGame[]
+  reviews   Review[]
+  listItems GameListItem[]
 
   @@index([title])
   @@index([avgRating])
@@ -86,23 +79,23 @@ model Game {
 }
 
 model UserGame {
-  id           String      @id @default(uuid())
-  userId       String
-  gameId       String
+  id     String @id @default(uuid())
+  userId String
+  gameId String
 
-  status       GameStatus
-  rating       Int?        @db.SmallInt // 1-10 scale
-  review       String?
-  isPrivate    Boolean     @default(false)
-  isFavorite   Boolean     @default(false)
+  status          GameStatus
+  platform        String?
+  playtimeHours   Float?
+  progressPercent Int?
+  rating          Int?       @db.SmallInt // 1-10 scale
+  reviewText      String?
+  playedAt        DateTime?
+  screenshotUrl   String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game         Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameId])
   @@index([status])
@@ -110,39 +103,37 @@ model UserGame {
   @@index([createdAt])
 }
 
-model Comment {
+model Review {
   id        String   @id @default(uuid())
   userId    String
   gameId    String
   content   String
-  isReview  Boolean  @default(false)
-  likes     Int      @default(0)
+  rating    Int?     @db.SmallInt // 1-10
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game  Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  likes Like[]
 
+  @@unique([userId, gameId])
   @@index([gameId])
   @@index([createdAt])
-  @@index([likes])
 }
 
 model GameList {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
   title       String
   description String?
-  type        ListType   @default(CUSTOM)
-  isPublic    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       GameListItem[]
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items GameListItem[]
 
   @@index([userId])
-  @@index([type])
   @@index([createdAt])
 }
 
@@ -151,39 +142,48 @@ model GameListItem {
   listId   String
   gameId   String
   position Int
-  note     String?
 
-  list     GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  game     Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  list GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  game Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([listId, gameId])
   @@index([position])
 }
 
 model Follow {
-  followerId   String
+  followerId  String
   followingId String
   createdAt   DateTime @default(now())
 
-  follower     User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
 }
 
-model Activity {
-  id          String        @id @default(uuid())
-  userId      String
-  gameId      String?
-  type        ActivityType
-  entityId    String?
-  metadata    Json?
-  createdAt  DateTime      @default(now())
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  reviewId  String
+  createdAt DateTime @default(now())
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game        Game?         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, reviewId])
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String
+  type       NotificationType
+  fromUserId String?
+  entityId   String?
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
   @@index([createdAt])
-  @@index([userId])
-  @@index([type])
 }

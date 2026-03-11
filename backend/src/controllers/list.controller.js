@@ -50,8 +50,8 @@ export async function deleteList(req, res, next) {
 
 export async function addItem(req, res, next) {
     try {
-        const { gameId, note } = req.body;
-        const item = await listService.addItemToList(req.params.id, req.user.id, gameId, note);
+        const { gameId } = req.body;
+        const item = await listService.addItemToList(req.params.id, req.user.id, gameId);
         res.status(201).json({ success: true, data: item });
     } catch (error) {
         next(error);

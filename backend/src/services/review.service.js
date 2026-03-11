@@ -1,24 +1,30 @@
 import prisma from '../config/database.js';
 
 /**
- * Get paginated reviews for a game, sortable by likes or date.
+ * Get paginated reviews for a game, sortable by likes count or date.
  */
 export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'createdAt' }) {
-    const orderBy = sortBy === 'likes' ? { likes: 'desc' } : { createdAt: 'desc' };
+    let orderBy;
+    if (sortBy === 'likes') {
+        orderBy = { likes: { _count: 'desc' } };
+    } else {
+        orderBy = { createdAt: 'desc' };
+    }
 
-    const where = { gameId, isReview: true };
+    const where = { gameId };
 
     const [reviews, total] = await Promise.all([
-        prisma.comment.findMany({
+        prisma.review.findMany({
             where,
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
+                _count: { select: { likes: true } },
             },
             orderBy,
             skip: (page - 1) * limit,
             take: limit,
         }),
-        prisma.comment.count({ where }),
+        prisma.review.count({ where }),
     ]);
 
     return {
@@ -31,19 +37,20 @@ export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'c
  * Get all reviews by a user.
  */
 export async function getUserReviews(userId, { page = 1, limit = 20 }) {
-    const where = { userId, isReview: true };
+    const where = { userId };
 
     const [reviews, total] = await Promise.all([
-        prisma.comment.findMany({
+        prisma.review.findMany({
             where,
             include: {
                 game: { select: { id: true, title: true, coverImage: true } },
+                _count: { select: { likes: true } },
             },
             orderBy: { createdAt: 'desc' },
             skip: (page - 1) * limit,
             take: limit,
         }),
-        prisma.comment.count({ where }),
+        prisma.review.count({ where }),
     ]);
 
     return {
@@ -67,39 +74,31 @@ export async function createReview(userId, gameId, { content, rating }) {
     const actualGameId = game.id;
 
     return prisma.$transaction(async (tx) => {
-        // Upsert review — one review per user per game
-        let review = await tx.comment.findFirst({
-            where: { userId, gameId: actualGameId, isReview: true },
+        // Upsert review - one review per user per game
+        let review = await tx.review.findUnique({
+            where: { userId_gameId: { userId, gameId: actualGameId } },
         });
 
         if (review) {
-            review = await tx.comment.update({
+            review = await tx.review.update({
                 where: { id: review.id },
-                data: { content, updatedAt: new Date() },
+                data: { content, rating, updatedAt: new Date() },
                 include: {
                     user: { select: { id: true, username: true, avatar: true } },
+                    _count: { select: { likes: true } },
                 },
             });
         } else {
-            review = await tx.comment.create({
+            review = await tx.review.create({
                 data: {
                     userId,
                     gameId: actualGameId,
                     content,
-                    isReview: true,
+                    rating,
                 },
                 include: {
                     user: { select: { id: true, username: true, avatar: true } },
-                },
-            });
-
-            // Log activity
-            await tx.activity.create({
-                data: {
-                    userId,
-                    gameId: actualGameId,
-                    type: 'REVIEW',
-                    entityId: review.id,
+                    _count: { select: { likes: true } },
                 },
             });
         }
@@ -138,25 +137,71 @@ export async function createReview(userId, gameId, { content, rating }) {
 }
 
 /**
- * Increment the like count on a review.
+ * Like a review. Uses the Like model for proper per-user tracking.
+ * Creates a notification for the review author.
  */
-export async function likeReview(reviewId) {
-    const review = await prisma.comment.findUnique({ where: { id: reviewId } });
+export async function likeReview(userId, reviewId) {
+    const review = await prisma.review.findUnique({ where: { id: reviewId } });
 
-    if (!review || !review.isReview) {
+    if (!review) {
         const error = new Error('Review not found');
         error.statusCode = 404;
         throw error;
     }
 
-    return prisma.comment.update({
-        where: { id: reviewId },
-        data: { likes: { increment: 1 } },
+    // Check if already liked
+    const existingLike = await prisma.like.findUnique({
+        where: { userId_reviewId: { userId, reviewId } },
     });
+
+    if (existingLike) {
+        const error = new Error('Already liked this review');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    const like = await prisma.like.create({
+        data: { userId, reviewId },
+    });
+
+    // Create notification for the review author (if not liking own review)
+    if (review.userId !== userId) {
+        await prisma.notification.create({
+            data: {
+                userId: review.userId,
+                type: 'LIKE',
+                fromUserId: userId,
+                entityId: reviewId,
+            },
+        });
+    }
+
+    // Return updated like count
+    const likeCount = await prisma.like.count({ where: { reviewId } });
+
+    return { liked: true, likeCount };
 }
 
 /**
- * Get review stats for a game — average rating, count, distribution.
+ * Unlike a review.
+ */
+export async function unlikeReview(userId, reviewId) {
+    try {
+        await prisma.like.delete({
+            where: { userId_reviewId: { userId, reviewId } },
+        });
+    } catch (err) {
+        if (err.code === 'P2025') {
+            const error = new Error('You have not liked this review');
+            error.statusCode = 404;
+            throw error;
+        }
+        throw err;
+    }
+}
+
+/**
+ * Get review stats for a game - average rating, count, distribution.
  */
 export async function getReviewStats(gameId) {
     const [ratingAgg, distribution, reviewCount] = await Promise.all([
@@ -171,7 +216,7 @@ export async function getReviewStats(gameId) {
             _count: { rating: true },
             orderBy: { rating: 'asc' },
         }),
-        prisma.comment.count({ where: { gameId, isReview: true } }),
+        prisma.review.count({ where: { gameId } }),
     ]);
 
     return {
