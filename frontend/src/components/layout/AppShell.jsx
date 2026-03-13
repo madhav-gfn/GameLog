@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { gameApi } from '../../api/gameApi';
 import { Sidebar } from '../Sidebar';
 import { RightPanel } from '../RightPanel';
 import { ThemeToggle } from '../ThemeToggle';
+import { LogModal } from '../LogModal';
 
 const navItems = [
   { path: '/', label: 'Home', icon: 'home' },
@@ -37,7 +39,7 @@ const MobileBottomNav = () => {
   );
 };
 
-const NavBar = () => {
+const NavBar = ({ onOpenLog }) => {
   const { user, logout } = useAuth();
 
   return (
@@ -51,6 +53,13 @@ const NavBar = () => {
       </Link>
 
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onOpenLog}
+          className="px-3 py-2 rounded bg-primary text-navy font-bold uppercase text-xs tracking-wider"
+        >
+          + Log Game
+        </button>
         <ThemeToggle />
         <div className="hidden sm:flex items-center gap-3">
           <span className="text-gray-300 font-semibold text-sm uppercase tracking-wider">
@@ -69,9 +78,29 @@ const NavBar = () => {
 };
 
 export const AppShell = ({ children }) => {
+  const { user } = useAuth();
+  const [logOpen, setLogOpen] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const handleCreateLog = async (payload) => {
+    const response = await gameApi.addGameToLibrary(payload.gameId, payload);
+    window.dispatchEvent(new CustomEvent('gamelog:created', {
+      detail: {
+        id: `optimistic-${Date.now()}`,
+        actor: user?.username || user?.displayName || 'You',
+        updatedAt: new Date().toISOString(),
+        gameId: payload.gameId,
+        game: { title: payload.gameTitle, coverImage: '', platforms: payload.platform ? [payload.platform] : [] },
+        userGame: { ...response, ...payload },
+      },
+    }));
+    setToast('Game log saved');
+    setTimeout(() => setToast(''), 2200);
+  };
+
   return (
     <div className="app-shell h-screen bg-background-dark text-white overflow-hidden">
-      <NavBar />
+      <NavBar onOpenLog={() => setLogOpen(true)} />
 
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         <aside className="w-[220px] shrink-0 max-[800px]:hidden bg-navy border-r-2 border-graphite overflow-hidden">
@@ -87,6 +116,9 @@ export const AppShell = ({ children }) => {
         </div>
       </div>
 
+      {toast && <div className="fixed top-20 right-4 z-[60] bg-primary text-navy px-4 py-2 rounded font-bold uppercase text-xs">{toast}</div>}
+
+      <LogModal open={logOpen} onClose={() => setLogOpen(false)} onSubmit={handleCreateLog} title="Log game" />
       <MobileBottomNav />
     </div>
   );
