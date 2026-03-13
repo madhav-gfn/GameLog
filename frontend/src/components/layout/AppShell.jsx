@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Sidebar } from '../Sidebar';
 import { RightPanel } from '../RightPanel';
 import { ThemeToggle } from '../ThemeToggle';
+import { SearchBar } from '../SearchBar';
 
 const navItems = [
   { path: '/', label: 'Home', icon: 'home' },
@@ -41,7 +42,7 @@ const NavBar = () => {
   const { user, logout } = useAuth();
 
   return (
-    <header className="h-16 bg-navy border-b-2 border-graphite px-4 sm:px-6 flex items-center justify-between">
+    <header className="h-16 bg-navy border-b-2 border-graphite px-4 sm:px-6 flex items-center gap-4">
       <Link to="/" className="flex items-center gap-3 hover:no-underline">
         <span className="material-symbols-outlined text-primary text-3xl">sports_esports</span>
         <div>
@@ -50,7 +51,11 @@ const NavBar = () => {
         </div>
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex-1 max-w-xl">
+        <SearchBar className="w-full" />
+      </div>
+
+      <div className="flex items-center gap-3 ml-auto">
         <ThemeToggle />
         <div className="hidden sm:flex items-center gap-3">
           <span className="text-gray-300 font-semibold text-sm uppercase tracking-wider">

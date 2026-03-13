@@ -5,3 +5,5 @@ export { Discover } from './Discover';
 export { GameDetail } from './GameDetail';
 export { Library } from './Library';
 export { Profile } from './Profile';
+
+export { SearchResults } from './SearchResults';
