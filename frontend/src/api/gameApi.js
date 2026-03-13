@@ -18,9 +18,10 @@ export const gameApi = {
     return api.get('/games/platforms');
   },
 
-  // Fetch user activity
-  async getUserActivity(userId) {
-    return api.get(`/users/${userId}/activity`);
+  // Fetch authenticated user's social activity feed (existing endpoint)
+  // userId is kept for compatibility and intentionally ignored.
+  async getUserActivity(_userId, params = {}) {
+    return api.get('/follow/feed', { params });
   },
 
   // Fetch game details

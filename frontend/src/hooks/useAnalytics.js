@@ -25,7 +25,7 @@ export const useAnalytics = () => {
         setLoading(true);
         try {
             const response = await analyticsApi.getPlaytimeStats(params);
-            setPlaytime(response.data);
+            setPlaytime(response);
         } catch (err) {
             setError(err.message);
         } finally {
