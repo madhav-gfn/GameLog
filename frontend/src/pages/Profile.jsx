@@ -6,6 +6,8 @@ import { analyticsApi } from '../api/analyticsApi';
 import { followApi } from '../api/followApi';
 import { listApi } from '../api/listApi';
 import { ListsManager } from '../components/ListsManager';
+import { ProfileHeader } from '../components/ProfileHeader';
+import { GameCard } from '../components/GameCard';
 
 const adaptStats = (profile, analytics, social, listCount) => ({
   followers: profile?.stats?.followers || profile?._count?.followers || social?.followers || 0,

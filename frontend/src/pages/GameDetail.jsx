@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header, LoadingSkeleton } from '../components/Layout';
-import { RatingStars } from '../components/RatingStars';
 import { ReviewForm } from '../components/ReviewForm';
 import { ReviewList } from '../components/ReviewList';
+import { GamePageHero } from '../components/GamePageHero';
 import { gameApi } from '../api/gameApi';
 import { reviewApi } from '../api/reviewApi';
 import { listApi } from '../api/listApi';
