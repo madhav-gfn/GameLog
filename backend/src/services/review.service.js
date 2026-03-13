@@ -136,6 +136,109 @@ export async function createReview(userId, gameId, { content, rating }) {
     });
 }
 
+
+function extractMentionedUsernames(content) {
+    const matches = content.match(/@([a-zA-Z0-9_]+)/g) || [];
+    return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
+}
+
+/**
+ * Create a comment for a review.
+ */
+export async function createReviewComment(userId, reviewId, { content }) {
+    const review = await prisma.review.findUnique({
+        where: { id: reviewId },
+        select: { id: true, userId: true },
+    });
+
+    if (!review) {
+        const error = new Error('Review not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const comment = await tx.comment.create({
+            data: { reviewId, userId, content },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                user: { select: { id: true, username: true, displayName: true, avatar: true } },
+            },
+        });
+
+        const notifications = [];
+
+        if (review.userId !== userId) {
+            notifications.push({
+                userId: review.userId,
+                type: 'COMMENT',
+                fromUserId: userId,
+                entityId: reviewId,
+            });
+        }
+
+        const mentionedUsernames = extractMentionedUsernames(content);
+        if (mentionedUsernames.length > 0) {
+            const mentionedUsers = await tx.user.findMany({
+                where: { username: { in: mentionedUsernames, mode: 'insensitive' } },
+                select: { id: true },
+            });
+
+            for (const mentionedUser of mentionedUsers) {
+                if (mentionedUser.id === userId || mentionedUser.id === review.userId) continue;
+                notifications.push({
+                    userId: mentionedUser.id,
+                    type: 'MENTION',
+                    fromUserId: userId,
+                    entityId: reviewId,
+                });
+            }
+        }
+
+        if (notifications.length > 0) {
+            await tx.notification.createMany({ data: notifications });
+        }
+
+        return comment;
+    });
+}
+
+/**
+ * Get comments for a review.
+ */
+export async function getReviewComments(reviewId, { page = 1, limit = 20 }) {
+    const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true } });
+
+    if (!review) {
+        const error = new Error('Review not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const where = { reviewId };
+    const [comments, total] = await Promise.all([
+        prisma.comment.findMany({
+            where,
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                user: { select: { id: true, username: true, displayName: true, avatar: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma.comment.count({ where }),
+    ]);
+
+    return {
+        comments,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+}
 /**
  * Like a review. Uses the Like model for proper per-user tracking.
  * Creates a notification for the review author.
