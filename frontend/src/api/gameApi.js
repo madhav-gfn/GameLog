@@ -29,8 +29,31 @@ export const gameApi = {
   },
 
   // Add game to library
-  async addGameToLibrary(gameId, { status, rating, review }) {
-    return api.post(`/games/${gameId}/library`, { status, rating, review });
+  async addGameToLibrary(gameId, payload = {}) {
+    const body = {
+      status: payload.status,
+      platform: payload.platform,
+      playtimeHours: payload.playtimeHours,
+      progressPercent: payload.progressPercent,
+      playedAt: payload.playedAt,
+      rating: payload.rating,
+      reviewText: payload.reviewText ?? payload.review,
+      screenshotUrl: payload.screenshotUrl,
+    };
+    return api.post(`/games/${gameId}/library`, body);
+  },
+
+  async updateGameInLibrary(gameId, payload = {}) {
+    return api.put(`/games/${gameId}/library`, {
+      status: payload.status,
+      platform: payload.platform,
+      playtimeHours: payload.playtimeHours,
+      progressPercent: payload.progressPercent,
+      playedAt: payload.playedAt,
+      rating: payload.rating,
+      reviewText: payload.reviewText,
+      screenshotUrl: payload.screenshotUrl,
+    });
   },
 
   // Get game from library (for user context)

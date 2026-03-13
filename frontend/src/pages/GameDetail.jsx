@@ -4,6 +4,8 @@ import { Header, LoadingSkeleton } from '../components/Layout';
 import { ReviewForm } from '../components/ReviewForm';
 import { ReviewList } from '../components/ReviewList';
 import { GamePageHero } from '../components/GamePageHero';
+import { RatingStars } from '../components/RatingStars';
+import { LogModal } from '../components/LogModal';
 import { gameApi } from '../api/gameApi';
 import { reviewApi } from '../api/reviewApi';
 import { listApi } from '../api/listApi';
@@ -31,6 +33,8 @@ export const GameDetail = () => {
   const [, setSelectedStatus] = useState('BACKLOG');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [logOpen, setLogOpen] = useState(false);
+  const [toast, setToast] = useState('');
 
   const fetchGameData = useCallback(async () => {
     try {
@@ -72,9 +76,23 @@ export const GameDetail = () => {
       return;
     }
     try {
-      const result = await gameApi.addGameToLibrary(gameId, updates);
+      const result = userGame
+        ? await gameApi.updateGameInLibrary(gameId, updates)
+        : await gameApi.addGameToLibrary(gameId, updates);
       setUserGame(result);
       if (updates.status) setSelectedStatus(updates.status);
+      setToast('Game log saved');
+      setTimeout(() => setToast(''), 2200);
+      window.dispatchEvent(new CustomEvent('gamelog:created', {
+        detail: {
+          id: `optimistic-${Date.now()}`,
+          actor: user?.username || user?.displayName || 'You',
+          updatedAt: new Date().toISOString(),
+          gameId,
+          game: { title: game?.title, coverImage: game?.coverImage || game?.cover, platforms: updates.platform ? [updates.platform] : game?.platforms || [] },
+          userGame: { ...result, ...updates },
+        },
+      }));
     } catch (err) {
       console.error('Failed to update library:', err);
       setLibraryError(err?.response?.data?.error || err.message || 'Failed to update library.');
@@ -165,7 +183,7 @@ export const GameDetail = () => {
             {status}
           </button>
         )) : (
-          <button onClick={() => handleUpdateLibrary({ status: 'BACKLOG' })} className="px-4 py-3 bg-primary text-navy font-bold uppercase rounded">
+          <button onClick={() => setLogOpen(true)} className="px-4 py-3 bg-primary text-navy font-bold uppercase rounded">
             + Add to Library
           </button>
         )}
@@ -282,6 +300,28 @@ export const GameDetail = () => {
           <img src={screenshots[lightboxIndex]?.urlHD || screenshots[lightboxIndex]?.url} alt={`Screenshot ${lightboxIndex + 1}`} className="max-w-[90vw] max-h-[85vh] object-contain rounded" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
+
+      {toast && <div className="fixed top-20 right-4 z-[60] bg-primary text-navy px-4 py-2 rounded font-bold uppercase text-xs">{toast}</div>}
+
+      <LogModal
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        onSubmit={handleUpdateLibrary}
+        lockGame
+        title={userGame ? 'Update log' : 'Log game'}
+        initialData={{
+          gameId: String(gameId),
+          gameTitle: game?.title || '',
+          status: userGame?.status || 'BACKLOG',
+          platform: userGame?.platform || '',
+          playtimeHours: userGame?.playtimeHours ?? '',
+          progressPercent: userGame?.progressPercent ?? '',
+          playedAt: userGame?.playedAt || '',
+          rating: userGame?.rating ?? '',
+          reviewText: userGame?.reviewText || '',
+          screenshotUrl: userGame?.screenshotUrl || '',
+        }}
+      />
     </div>
   );
 };
