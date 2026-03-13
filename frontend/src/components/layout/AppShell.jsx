@@ -6,12 +6,15 @@ import { Sidebar } from '../Sidebar';
 import { RightPanel } from '../RightPanel';
 import { ThemeToggle } from '../ThemeToggle';
 import { SearchBar } from '../SearchBar';
+import { NotificationDropdown } from '../NotificationDropdown';
+import { LogModal } from '../LogModal';
 
 const navItems = [
   { path: '/', label: 'Home', icon: 'home' },
   { path: '/discover', label: 'Discover', icon: 'explore' },
   { path: '/library', label: 'Library', icon: 'library_books' },
   { path: '/profile', label: 'Profile', icon: 'person' },
+  { path: '/notifications', label: 'Alerts', icon: 'notifications' },
 ];
 
 const MobileBottomNav = () => {
@@ -57,6 +60,7 @@ const NavBar = ({ onOpenLog }) => {
       </div>
 
       <div className="flex items-center gap-3 ml-auto">
+        <NotificationDropdown />
         <ThemeToggle />
         <div className="hidden sm:flex items-center gap-3">
           <span className="text-gray-300 font-semibold text-sm uppercase tracking-wider">

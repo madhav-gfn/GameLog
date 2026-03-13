@@ -7,3 +7,4 @@ export { Library } from './Library';
 export { Profile } from './Profile';
 
 export { SearchResults } from './SearchResults';
+export { Notifications } from './Notifications';

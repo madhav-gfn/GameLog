@@ -7,6 +7,7 @@ const navItems = [
   { path: '/library', label: 'Library', icon: 'library_books' },
   { path: '/discover', label: 'Discover', icon: 'monitoring' },
   { path: '/profile', label: 'Profile', icon: 'person' },
+  { path: '/notifications', label: 'Notifications', icon: 'notifications' },
 ];
 
 /**
