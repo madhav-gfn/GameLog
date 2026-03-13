@@ -1,11 +1,18 @@
-// Export all components for easy importing
 export { RatingStars } from './RatingStars';
 export { StatusBadge } from './StatusBadge';
 export { GameCard } from './GameCard';
 export { LoadingSkeleton } from './LoadingSkeleton';
 export { Header, EmptyState } from './Layout';
-export { Navigation } from './Navigation';
+export { Navigation, NavBar } from './Navigation';
+export { NotificationDropdown } from './NotificationDropdown';
 export { SearchBar } from './SearchBar';
 export { TrendingCarousel } from './TrendingCarousel';
 export { TopRated } from './TopRated';
 export { ThemeToggle } from './ThemeToggle';
+export { Sidebar } from './Sidebar';
+export { FeedCard } from './FeedCard';
+export { GamePageHero } from './GamePageHero';
+export { ProfileHeader } from './ProfileHeader';
+export { LogModal } from './LogModal';
+export { ListGrid } from './ListGrid';
+export { RightRail } from './RightRail';

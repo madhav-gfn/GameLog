@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
 import { analyticsApi } from '../api/analyticsApi';
 import { ListsManager } from '../components/ListsManager';
+import { ProfileHeader } from '../components/ProfileHeader';
+import { GameCard } from '../components/GameCard';
 
 export const Profile = () => {
   const navigate = useNavigate();
@@ -62,9 +64,7 @@ export const Profile = () => {
   if (loading) {
     return (
       <div>
-        <header className="mb-8 border-b-4 border-primary pb-4">
-          <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
-        </header>
+        <ProfileHeader loading />
         <div className="bg-navy border-2 border-graphite rounded p-8 animate-pulse">
           <div className="flex gap-6">
             <div className="w-24 h-24 bg-graphite rounded-full" />
@@ -81,9 +81,7 @@ export const Profile = () => {
   if (error || !userProfile) {
     return (
       <div>
-        <header className="mb-8 border-b-4 border-primary pb-4">
-          <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
-        </header>
+        <ProfileHeader error={error || 'Unable to load profile'} />
         <div className="text-center py-12">
           <span className="material-symbols-outlined text-crimson text-6xl mb-4 block">error</span>
           <p className="text-gray-400">{error || 'Unable to load profile'}</p>
@@ -119,10 +117,7 @@ export const Profile = () => {
 
   return (
     <div>
-      <header className="mb-8 border-b-4 border-primary pb-4">
-        <h2 className="text-5xl font-bold uppercase tracking-tighter text-white">Profile</h2>
-        <p className="text-primary font-bold uppercase tracking-widest mt-2 text-lg">YOUR STATS</p>
-      </header>
+      <ProfileHeader title="Profile" subtitle="YOUR STATS" />
 
       {/* Profile Card */}
       <div className="bg-navy border-2 border-graphite rounded p-8 mb-8">
@@ -249,28 +244,7 @@ export const Profile = () => {
         {activeTab === 'Library' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {transformedLibrary.map((game) => (
-              <div
-                key={game.id || game.rawgId}
-                onClick={() => navigate(`/game/${game.rawgId || game.id}`)}
-                className="cursor-pointer group bg-navy border-2 border-graphite rounded overflow-hidden hover:border-primary transition-colors"
-              >
-                <div className="aspect-video bg-graphite">
-                  <img
-                    src={game.coverImage}
-                    alt={game.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="256" height="144"%3E%3Crect fill="%232d3748" width="256" height="144"/%3E%3C/svg%3E';
-                    }}
-                  />
-                </div>
-                <div className="p-3">
-                  <h3 className="text-sm font-bold text-white truncate uppercase group-hover:text-primary transition-colors">
-                    {game.title}
-                  </h3>
-                  {game.rating && <span className="text-xs text-primary font-bold">★ {game.rating}/10</span>}
-                </div>
-              </div>
+              <GameCard key={game.id || game.rawgId} game={game} compact onClick={() => navigate(`/game/${game.rawgId || game.id}`)} />
             ))}
             {transformedLibrary.length === 0 && (
               <div className="col-span-full text-center py-12 text-gray-500">

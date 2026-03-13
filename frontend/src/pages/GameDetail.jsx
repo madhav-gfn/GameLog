@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header, LoadingSkeleton } from '../components/Layout';
-import { RatingStars } from '../components/RatingStars';
 import { ReviewForm } from '../components/ReviewForm';
 import { ReviewList } from '../components/ReviewList';
+import { GamePageHero } from '../components/GamePageHero';
 import { gameApi } from '../api/gameApi';
 import { api } from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -117,26 +117,7 @@ export const GameDetail = () => {
 
   return (
     <div>
-      {/* Hero Section */}
-      <div className="mb-8 -mx-8 -mt-8">
-        <div className="relative h-80 bg-graphite overflow-hidden">
-          <img src={game.cover} alt={game.title} className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/80 to-transparent" />
-          <div className="absolute bottom-6 left-8 right-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-white uppercase tracking-tighter mb-3">
-              {game.title}
-            </h1>
-            <div className="flex gap-3 flex-wrap items-center">
-              {game.releaseYear && <span className="text-gray-400 font-bold">{game.releaseYear}</span>}
-              <RatingStars rating={game.averageRating} />
-              {game.ratingCount > 0 && <span className="text-xs text-gray-500">{game.ratingCount} ratings</span>}
-              {developers.length > 0 && (
-                <span className="text-xs text-primary font-bold uppercase">by {developers.map(d => d.name).join(', ')}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <GamePageHero game={game} developers={developers} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         {/* Main Content */}
