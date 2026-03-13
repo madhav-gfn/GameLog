@@ -62,3 +62,26 @@ export async function getReviewStats(req, res, next) {
         next(error);
     }
 }
+
+
+export async function createReviewComment(req, res, next) {
+    try {
+        const comment = await reviewService.createReviewComment(req.user.id, req.params.reviewId, req.body);
+        res.status(201).json({ success: true, data: comment });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function getReviewComments(req, res, next) {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+        const result = await reviewService.getReviewComments(req.params.reviewId, {
+            page: parseInt(page),
+            limit: parseInt(limit),
+        });
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+}

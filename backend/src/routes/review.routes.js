@@ -1,5 +1,14 @@
 import express from 'express';
-import { getGameReviews, getUserReviews, createReview, likeReview, unlikeReview, getReviewStats } from '../controllers/review.controller.js';
+import {
+    getGameReviews,
+    getUserReviews,
+    createReview,
+    likeReview,
+    unlikeReview,
+    getReviewStats,
+    createReviewComment,
+    getReviewComments,
+} from '../controllers/review.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 
@@ -24,6 +33,21 @@ router.post('/game/:gameId',
         },
     }),
     createReview
+);
+
+
+// GET /api/reviews/:reviewId/comments - get comments for a review (public)
+router.get('/:reviewId/comments', getReviewComments);
+
+// POST /api/reviews/:reviewId/comments - create a comment (protected)
+router.post('/:reviewId/comments',
+    requireAuth,
+    validate({
+        body: {
+            content: { required: true, type: 'string', minLength: 1, maxLength: 2000 },
+        },
+    }),
+    createReviewComment
 );
 
 // POST /api/reviews/:reviewId/like - like a review (protected)
