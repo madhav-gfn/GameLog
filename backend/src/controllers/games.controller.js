@@ -1,4 +1,11 @@
-import { fetchGamesFromRawg, fetchGenres, fetchPlatforms, getOrCreateGame, getIGDBEnrichment } from '../services/games.service.js';
+import {
+  fetchGamesFromRawg,
+  fetchGenres,
+  fetchPlatforms,
+  getOrCreateGame,
+  getIGDBEnrichment,
+  getGameStatsById,
+} from '../services/games.service.js';
 import prisma from '../config/database.js';
 
 // Get games with filters (RAWG-powered)
@@ -121,6 +128,26 @@ export async function getGameDetails(req, res) {
   } catch (error) {
     console.error('Error in getGameDetails controller:', error);
     res.status(500).json({ error: 'Failed to fetch game details' });
+  }
+}
+
+
+// Get lightweight game stats for charts
+export async function getGameStats(req, res) {
+  try {
+    const { id } = req.params;
+    const game = await getOrCreateGame(id);
+
+    const stats = await getGameStatsById(game.id);
+
+    res.json({
+      gameId: game.id,
+      rawgId: game.rawgId,
+      ...stats,
+    });
+  } catch (error) {
+    console.error('Error in getGameStats controller:', error);
+    res.status(500).json({ error: 'Failed to fetch game stats' });
   }
 }
 

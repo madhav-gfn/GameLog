@@ -2,6 +2,7 @@ import express from 'express';
 import {
     getGames,
     getGameDetails,
+    getGameStats,
     addGameToLibrary,
     updateGameInLibrary,
     removeGameFromLibrary,
@@ -21,6 +22,9 @@ router.get('/genres', getGenres);
 
 // GET /api/games/platforms - Get available platforms
 router.get('/platforms', getPlatforms);
+
+// GET /api/games/:id/stats - Get lightweight game stats
+router.get('/:id/stats', getGameStats);
 
 // GET /api/games/:id - Get game details
 router.get('/:id', getGameDetails);
