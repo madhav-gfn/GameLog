@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion as Motion, useReducedMotion } from 'framer-motion';
 import { useFollow } from '../hooks/useFollow';
 import { FeedCard } from './FeedCard';
+import { feedCardVariants, getTransition } from './animations/variants';
 
 const PAGE_LIMIT = 8;
 
 export const SocialFeed = ({ filter = 'all' }) => {
   const { feed, feedPagination, fetchFeed, loading, error } = useFollow();
   const [loadingMore, setLoadingMore] = useState(false);
+  const reduceMotion = useReducedMotion();
   const loadMoreRef = useRef(null);
 
   useEffect(() => {
@@ -73,8 +76,16 @@ export const SocialFeed = ({ filter = 'all' }) => {
 
   return (
     <div className="space-y-4">
-      {filteredActivities.map((activity) => (
-        <FeedCard key={`${activity.type}-${activity.id}`} item={activity} />
+      {filteredActivities.map((activity, index) => (
+        <Motion.div
+          key={`${activity.type}-${activity.id}`}
+          variants={feedCardVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ ...getTransition(reduceMotion, 'feedEntry'), delay: reduceMotion ? 0 : index * 0.04 }}
+        >
+          <FeedCard item={activity} />
+        </Motion.div>
       ))}
 
       <div ref={loadMoreRef} className="h-2" aria-hidden />
