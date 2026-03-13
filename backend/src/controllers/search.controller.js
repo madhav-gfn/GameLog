@@ -1,11 +1,25 @@
 import * as searchService from '../services/search.service.js';
 
+/**
+ * Global search endpoint.
+ *
+ * Query params:
+ * - q: search text
+ * - type: one of 'all' | 'games' | 'users' | 'lists'
+ * - page: page number for paginated sources
+ * - limit: items per page
+ */
 export async function search(req, res, next) {
     try {
         const { q = '', type = 'all', page = 1, limit = 20 } = req.query;
 
         if (!q.trim()) {
-            return res.json({ success: true, games: { games: [], totalCount: 0 }, users: { users: [], totalCount: 0 } });
+            return res.json({
+                success: true,
+                games: { games: [], totalCount: 0 },
+                users: { users: [], totalCount: 0 },
+                lists: { lists: [], totalCount: 0 },
+            });
         }
 
         const results = await searchService.search(q.trim(), type, parseInt(page), parseInt(limit));

@@ -2,7 +2,7 @@ import prisma from '../config/database.js';
 import { fetchGamesFromRawg } from './games.service.js';
 
 /**
- * Search games in RAWG and users in local database.
+ * Search games in RAWG plus users/lists in local database.
  */
 export async function search(query, type = 'all', page = 1, limit = 20) {
     const results = {};
@@ -55,6 +55,36 @@ export async function search(query, type = 'all', page = 1, limit = 20) {
 
         results.users = {
             users,
+            totalCount: total,
+            pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+        };
+    }
+
+    if (type === 'all' || type === 'lists') {
+        const where = {
+            isPublic: true,
+            OR: [
+                { title: { contains: query, mode: 'insensitive' } },
+                { description: { contains: query, mode: 'insensitive' } },
+            ],
+        };
+
+        const [lists, total] = await Promise.all([
+            prisma.gameList.findMany({
+                where,
+                include: {
+                    user: { select: { id: true, username: true, avatar: true } },
+                    _count: { select: { items: true } },
+                },
+                take: limit,
+                skip: (page - 1) * limit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.gameList.count({ where }),
+        ]);
+
+        results.lists = {
+            lists,
             totalCount: total,
             pagination: { page, limit, total, pages: Math.ceil(total / limit) },
         };
