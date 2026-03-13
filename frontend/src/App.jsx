@@ -8,8 +8,7 @@ import { Discover } from './pages/Discover';
 import { GameDetail } from './pages/GameDetail';
 import { Library } from './pages/Library';
 import { Profile } from './pages/Profile';
-import { Sidebar } from './components/Sidebar';
-import { RightPanel } from './components/RightPanel';
+import { AppShell } from './components/layout/AppShell';
 import './App.css';
 
 const AppContent = () => {
@@ -31,27 +30,15 @@ const AppContent = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background-dark">
-      {/* Auto-hiding sidebar (fixed overlay, not in flex flow) */}
-      <Sidebar />
-
-      {/* Main content area takes full width */}
-      <main className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="page-content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/game/:gameId" element={<GameDetail />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/profile" element={<Profile />} />
-            </Routes>
-          </div>
-        </div>
-
-        <RightPanel />
-      </main>
-    </div>
+    <AppShell>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/discover" element={<Discover />} />
+        <Route path="/game/:gameId" element={<GameDetail />} />
+        <Route path="/library" element={<Library />} />
+        <Route path="/profile" element={<Profile />} />
+      </Routes>
+    </AppShell>
   );
 };
 
