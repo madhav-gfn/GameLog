@@ -5,6 +5,7 @@ export const useFollow = () => {
     const [followers, setFollowers] = useState([]);
     const [following, setFollowing] = useState([]);
     const [feed, setFeed] = useState([]);
+    const [feedPagination, setFeedPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -32,16 +33,18 @@ export const useFollow = () => {
         }
     }, []);
 
-    const fetchFeed = useCallback(async () => {
+    const fetchFeed = useCallback(async ({ page = 1, limit = 10, append = false } = {}) => {
         setLoading(true);
+        setError(null);
         try {
-            const response = await followApi.getSocialFeed();
-            setFeed(response.activities); // Adjust based on actual API response structure (response.data.activities?)
-            // backend: res.json({ success: true, activities: ... })
-            // axios interceptor returns response.data -> { success: true, activities: ... }
-            // So above is correct: response.activities
+            const response = await followApi.getSocialFeed({ page, limit });
+            const nextActivities = response.activities || [];
+            setFeed((prev) => (append ? [...prev, ...nextActivities] : nextActivities));
+            setFeedPagination(response.pagination || { page, limit, total: nextActivities.length, pages: 1 });
+            return response;
         } catch (err) {
             setError(err.message);
+            throw err;
         } finally {
             setLoading(false);
         }
@@ -50,7 +53,6 @@ export const useFollow = () => {
     const followUser = async (userId) => {
         try {
             await followApi.followUser(userId);
-            // Ideally refetch or update state
         } catch (err) {
             setError(err.message);
             throw err;
@@ -80,6 +82,7 @@ export const useFollow = () => {
         followers,
         following,
         feed,
+        feedPagination,
         loading,
         error,
         fetchFollowers,

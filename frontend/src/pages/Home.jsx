@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SessionCard } from '../components/SessionCard';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
-import { followApi } from '../api/followApi';
+import { SocialFeed } from '../components/SocialFeed';
 
 const statusToResult = {
   COMPLETED: 'victory',
@@ -67,9 +67,7 @@ export const Home = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [usingFeed, setUsingFeed] = useState(true);
+  const [feedFilter, setFeedFilter] = useState('all');
 
   const fetchLibraryFallback = useCallback(async () => {
     if (!user?.id) return;
@@ -138,6 +136,16 @@ export const Home = () => {
     return feedItems.filter((item) => item.userGame?.status === filter.toUpperCase());
   }, [feedItems, filter]);
 
+
+  const socialFilterButtons = [
+    { key: 'all', label: 'All' },
+    { key: 'friends', label: 'Friends' },
+    { key: 'following', label: 'Following' },
+    { key: 'popular', label: 'Popular' },
+    { key: 'platform', label: 'Platform' },
+    { key: 'status', label: 'Status' },
+  ];
+
   const filterButtons = [
     { key: 'all', label: 'ALL' },
     { key: 'playing', label: 'PLAYING' },
@@ -172,6 +180,28 @@ export const Home = () => {
         </div>
       </header>
 
+      <section className="mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+          <h3 className="text-2xl font-bold uppercase tracking-tight text-white">Social Feed</h3>
+          <div className="flex flex-wrap gap-2">
+            {socialFilterButtons.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFeedFilter(f.key)}
+                className={`px-3 py-2 rounded font-bold uppercase text-xs transition-colors ${feedFilter === f.key
+                  ? 'bg-primary text-navy'
+                  : 'bg-graphite text-white hover:bg-navy'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <SocialFeed filter={feedFilter} />
+      </section>
+
+      {/* Loading */}
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
