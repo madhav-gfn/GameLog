@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationApi } from '../api/notificationApi';
+import { normalizeNotificationResponse } from '../utils/responseAdapters';
 
 const formatRelativeTime = (value) => {
   if (!value) return '';
@@ -34,9 +35,10 @@ export const NotificationDropdown = ({ limit = 5 }) => {
     setError(null);
     try {
       const data = await notificationApi.getNotifications({ limit, page: 1 });
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch (_err) {
+      const normalized = normalizeNotificationResponse(data, 1, limit);
+      setNotifications(normalized.notifications);
+      setUnreadCount(normalized.unreadCount);
+    } catch {
       setError('Failed to load notifications');
     } finally {
       setLoading(false);
@@ -73,7 +75,7 @@ export const NotificationDropdown = ({ limit = 5 }) => {
         notif.id === notificationId ? { ...notif, read: true } : notif
       )));
       setUnreadCount((prev) => Math.max(prev - 1, 0));
-    } catch (_err) {
+    } catch {
       setError('Unable to update notification');
     }
   };
@@ -83,7 +85,7 @@ export const NotificationDropdown = ({ limit = 5 }) => {
       await notificationApi.markAllAsRead();
       setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
       setUnreadCount(0);
-    } catch (_err) {
+    } catch {
       setError('Unable to mark all as read');
     }
   };

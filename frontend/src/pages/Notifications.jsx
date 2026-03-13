@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { notificationApi } from '../api/notificationApi';
+import { normalizeNotificationResponse } from '../utils/responseAdapters';
 
 const PAGE_SIZE = 20;
 
@@ -23,10 +24,11 @@ export const Notifications = () => {
 
     try {
       const data = await notificationApi.getNotifications({ page: targetPage, limit: PAGE_SIZE });
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-      setPagination(data.pagination || { page: targetPage, pages: 1, total: 0 });
-    } catch (_err) {
+      const normalized = normalizeNotificationResponse(data, targetPage, PAGE_SIZE);
+      setNotifications(normalized.notifications);
+      setUnreadCount(normalized.unreadCount);
+      setPagination(normalized.pagination);
+    } catch {
       setError('Failed to load notifications');
     } finally {
       setLoading(false);
@@ -44,7 +46,7 @@ export const Notifications = () => {
         notif.id === notificationId ? { ...notif, read: true } : notif
       )));
       setUnreadCount((prev) => Math.max(prev - 1, 0));
-    } catch (_err) {
+    } catch {
       setError('Unable to update notification');
     }
   };
@@ -54,7 +56,7 @@ export const Notifications = () => {
       await notificationApi.markAllAsRead();
       setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
       setUnreadCount(0);
-    } catch (_err) {
+    } catch {
       setError('Unable to mark all as read');
     }
   };

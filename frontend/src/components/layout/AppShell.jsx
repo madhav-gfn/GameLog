@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { gameApi } from '../../api/gameApi';
 import { Sidebar } from '../Sidebar';
@@ -60,6 +60,9 @@ const NavBar = ({ onOpenLog }) => {
       </div>
 
       <div className="flex items-center gap-3 ml-auto">
+        <button onClick={onOpenLog} className="hidden md:inline-flex px-3 py-2 rounded bg-crimson text-white text-xs font-bold uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-primary">
+          New log (N)
+        </button>
         <NotificationDropdown />
         <ThemeToggle />
         <div className="hidden sm:flex items-center gap-3">
@@ -80,8 +83,48 @@ const NavBar = ({ onOpenLog }) => {
 
 export const AppShell = ({ children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [logOpen, setLogOpen] = useState(false);
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    let awaitingGoTarget = false;
+
+    const onKeyDown = (event) => {
+      const tagName = event.target?.tagName?.toLowerCase();
+      const isEditable = tagName === 'input' || tagName === 'textarea' || event.target?.isContentEditable;
+
+      if (event.key.toLowerCase() === 'g' && !isEditable) {
+        awaitingGoTarget = true;
+        setTimeout(() => {
+          awaitingGoTarget = false;
+        }, 800);
+        return;
+      }
+
+      if (awaitingGoTarget) {
+        const key = event.key.toLowerCase();
+        if (key === 'h') {
+          event.preventDefault();
+          navigate('/');
+        }
+        if (key === 'p') {
+          event.preventDefault();
+          navigate('/profile');
+        }
+        awaitingGoTarget = false;
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'n' && !isEditable) {
+        event.preventDefault();
+        setLogOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [navigate]);
 
   const handleCreateLog = async (payload) => {
     const response = await gameApi.addGameToLibrary(payload.gameId, payload);
@@ -105,7 +148,7 @@ export const AppShell = ({ children }) => {
 
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         <aside className="w-[220px] shrink-0 max-[800px]:hidden bg-navy border-r-2 border-graphite overflow-hidden">
-          <Sidebar />
+          <Sidebar onCreateLog={() => setLogOpen(true)} />
         </aside>
 
         <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 md:p-8 max-[800px]:pb-24">

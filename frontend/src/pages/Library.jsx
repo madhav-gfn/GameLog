@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
+import { normalizeLibraryEntry } from '../utils/responseAdapters';
 
 export const Library = () => {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export const Library = () => {
       try {
         setLoading(true);
         const data = await userApi.getUserLibrary(user.id);
-        setGames(data.games || []);
+        setGames((data.games || []).map(normalizeLibraryEntry));
         setError(null);
       } catch (err) {
         console.error('Failed to fetch library:', err);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion as Motion, useReducedMotion } from 'framer-motion';
+import { motion as Motion, useReducedMotion } from '../utils/motionCompat';
 import { RatingStars } from './RatingStars';
 import {
   coverZoomVariants,

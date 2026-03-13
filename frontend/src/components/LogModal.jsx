@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion as Motion, useReducedMotion } from '../utils/motionCompat';
 import { gameApi } from '../api/gameApi';
 import { getTransition, modalBackdropVariants, modalContentVariants } from './animations/variants';
 
