@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion as Motion, useReducedMotion } from 'framer-motion';
+import { motion as Motion, useReducedMotion } from '../utils/motionCompat';
 import { useFollow } from '../hooks/useFollow';
 import { FeedCard } from './FeedCard';
 import { feedCardVariants, getTransition } from './animations/variants';
