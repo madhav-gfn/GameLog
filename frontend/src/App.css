@@ -54,6 +54,24 @@
   transform: translateX(0);
 }
 
+/* Keep sidebar logic, but pin it in AppShell desktop layout */
+.app-shell .sidebar-trigger,
+.app-shell .sidebar-backdrop {
+  display: none;
+}
+
+.app-shell .sidebar-panel,
+.app-shell .sidebar-expanded,
+.app-shell .sidebar-collapsed {
+  position: sticky;
+  top: 0;
+  width: 220px;
+  min-width: 220px;
+  height: calc(100vh - 4rem);
+  transform: none;
+  border-right-width: 2px;
+}
+
 /* ===== Page transitions ===== */
 @keyframes fadeIn {
   from {
@@ -72,8 +90,16 @@
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .right-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .app-shell .sidebar-panel,
+  .app-shell .sidebar-expanded,
+  .app-shell .sidebar-collapsed {
     display: none;
   }
 }
