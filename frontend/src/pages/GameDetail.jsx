@@ -6,15 +6,18 @@ import { ReviewList } from '../components/ReviewList';
 import { GamePageHero } from '../components/GamePageHero';
 import { RatingStars } from '../components/RatingStars';
 import { LogModal } from '../components/LogModal';
+import { GameStatsCharts } from '../components/GameStatsCharts';
 import { gameApi } from '../api/gameApi';
 import { reviewApi } from '../api/reviewApi';
 import { listApi } from '../api/listApi';
+import { analyticsApi } from '../api/analyticsApi';
 import { api } from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const adaptReviewStats = (stats) => ({
-  averageRating: stats?.averageRating || 0,
-  totalReviews: stats?.totalReviews || stats?.count || 0,
+  averageRating: stats?.data?.averageRating || stats?.averageRating || 0,
+  totalReviews: stats?.data?.totalReviews || stats?.totalReviews || stats?.count || 0,
+  distribution: stats?.data?.distribution || stats?.distribution || [],
 });
 
 export const GameDetail = () => {
@@ -24,6 +27,8 @@ export const GameDetail = () => {
   const [game, setGame] = useState(null);
   const [userGame, setUserGame] = useState(null);
   const [reviewStats, setReviewStats] = useState({ averageRating: 0, totalReviews: 0 });
+  const [analyticsStats, setAnalyticsStats] = useState(null);
+  const [analyticsUnavailable, setAnalyticsUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [libraryError, setLibraryError] = useState(null);
@@ -56,6 +61,19 @@ export const GameDetail = () => {
 
   useEffect(() => {
     fetchGameData();
+
+    if (user?.id) {
+      analyticsApi.getGameStats().then((res) => {
+        setAnalyticsStats(res?.data || null);
+        setAnalyticsUnavailable(false);
+      }).catch(() => {
+        setAnalyticsStats(null);
+        setAnalyticsUnavailable(true);
+      });
+    } else {
+      setAnalyticsStats(null);
+      setAnalyticsUnavailable(false);
+    }
 
     if (user?.id) {
       api.get(`/users/${user.id}/library`).then((res) => {
@@ -230,6 +248,14 @@ export const GameDetail = () => {
             {gameModes.length > 0 && <p><span className="text-gray-500">Modes:</span> <span className="text-white">{gameModes.join(', ')}</span></p>}
           </div>
         </div>
+      )}
+
+      {activeTab === 'Overview' && (
+        <GameStatsCharts
+          reviewStats={reviewStats}
+          analyticsStats={analyticsStats}
+          analyticsUnavailable={analyticsUnavailable}
+        />
       )}
 
       {activeTab === 'Media' && (
