@@ -187,3 +187,45 @@ export async function getIGDBEnrichment(game) {
     return null;
   }
 }
+
+// Get lightweight, chart-friendly stats for a game
+export async function getGameStatsById(gameId) {
+  const sevenDaysAgo = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+
+  const [weeklyActiveUsers, aggregates, completionCount, totalLogs] = await Promise.all([
+    prisma.userGame.findMany({
+      where: {
+        gameId,
+        updatedAt: { gte: sevenDaysAgo },
+      },
+      distinct: ['userId'],
+      select: { userId: true },
+    }),
+    prisma.userGame.aggregate({
+      where: { gameId },
+      _avg: {
+        playtimeHours: true,
+      },
+    }),
+    prisma.userGame.count({
+      where: {
+        gameId,
+        status: 'COMPLETED',
+      },
+    }),
+    prisma.userGame.count({
+      where: { gameId },
+    }),
+  ]);
+
+  const avgPlaytimeHours = aggregates._avg.playtimeHours ?? null;
+  const completionRate = totalLogs > 0
+    ? (completionCount / totalLogs) * 100
+    : null;
+
+  return {
+    weeklyActiveLoggers: weeklyActiveUsers.length,
+    avgPlaytimeHours,
+    completionRate,
+  };
+}
