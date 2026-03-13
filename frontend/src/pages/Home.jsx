@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SessionCard } from '../components/SessionCard';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
+import { SocialFeed } from '../components/SocialFeed';
 
 // Map GameStatus to SessionCard result type
 const statusToResult = {
@@ -47,6 +48,7 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [feedFilter, setFeedFilter] = useState('all');
 
   useEffect(() => {
     const fetchLibrary = async () => {
@@ -82,6 +84,16 @@ export const Home = () => {
     (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
   );
 
+
+  const socialFilterButtons = [
+    { key: 'all', label: 'All' },
+    { key: 'friends', label: 'Friends' },
+    { key: 'following', label: 'Following' },
+    { key: 'popular', label: 'Popular' },
+    { key: 'platform', label: 'Platform' },
+    { key: 'status', label: 'Status' },
+  ];
+
   const filterButtons = [
     { key: 'all', label: 'ALL' },
     { key: 'playing', label: 'PLAYING' },
@@ -116,6 +128,27 @@ export const Home = () => {
           ))}
         </div>
       </header>
+
+      <section className="mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+          <h3 className="text-2xl font-bold uppercase tracking-tight text-white">Social Feed</h3>
+          <div className="flex flex-wrap gap-2">
+            {socialFilterButtons.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFeedFilter(f.key)}
+                className={`px-3 py-2 rounded font-bold uppercase text-xs transition-colors ${feedFilter === f.key
+                  ? 'bg-primary text-navy'
+                  : 'bg-graphite text-white hover:bg-navy'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <SocialFeed filter={feedFilter} />
+      </section>
 
       {/* Loading */}
       {loading && (
