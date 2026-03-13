@@ -122,6 +122,19 @@ export const Home = () => {
     fetchFeed(1, true);
   }, [user, fetchFeed]);
 
+  useEffect(() => {
+    const onLogCreated = (event) => {
+      const item = event.detail;
+      if (!item) return;
+      setFeedItems((prev) => [item, ...prev]);
+      setUsingFeed(true);
+    };
+
+    window.addEventListener('gamelog:created', onLogCreated);
+    return () => window.removeEventListener('gamelog:created', onLogCreated);
+  }, []);
+
+
   const filteredLibraryGames = useMemo(() => games.filter((g) => {
     if (filter === 'completed') return g.status === 'COMPLETED';
     if (filter === 'playing') return g.status === 'PLAYING';
