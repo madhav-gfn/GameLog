@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { followApi } from '../api/followApi.js';
+import { normalizeFeedResponse } from '../utils/responseAdapters';
 
 export const useFollow = () => {
     const [followers, setFollowers] = useState([]);
@@ -13,7 +14,7 @@ export const useFollow = () => {
         setLoading(true);
         try {
             const response = await followApi.getFollowers(userId);
-            setFollowers(response.data.users);
+            setFollowers(response?.data?.users || response?.users || []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -25,7 +26,7 @@ export const useFollow = () => {
         setLoading(true);
         try {
             const response = await followApi.getFollowing(userId);
-            setFollowing(response.data.users);
+            setFollowing(response?.data?.users || response?.users || []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -38,10 +39,11 @@ export const useFollow = () => {
         setError(null);
         try {
             const response = await followApi.getSocialFeed({ page, limit });
-            const nextActivities = response.activities || [];
+            const normalized = normalizeFeedResponse(response, page, limit);
+            const nextActivities = normalized.activities;
             setFeed((prev) => (append ? [...prev, ...nextActivities] : nextActivities));
-            setFeedPagination(response.pagination || { page, limit, total: nextActivities.length, pages: 1 });
-            return response;
+            setFeedPagination(normalized.pagination);
+            return normalized;
         } catch (err) {
             setError(err.message);
             throw err;
