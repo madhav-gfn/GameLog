@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionCard } from '../components/SessionCard';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
 import { SocialFeed } from '../components/SocialFeed';
 
-// Map GameStatus to SessionCard result type
 const statusToResult = {
   COMPLETED: 'victory',
   ABANDONED: 'defeat',
@@ -15,7 +14,6 @@ const statusToResult = {
   WISHLIST: 'progress',
 };
 
-// Map GameStatus to human-friendly label
 const statusLabel = {
   COMPLETED: 'COMPLETED',
   ABANDONED: 'DROPPED',
@@ -25,7 +23,8 @@ const statusLabel = {
   WISHLIST: 'WISHLIST',
 };
 
-// Format date as time ago
+const FEED_PAGE_SIZE = 12;
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const now = new Date();
@@ -41,48 +40,101 @@ function timeAgo(dateStr) {
   return date.toLocaleDateString();
 }
 
+const adaptFeedActivity = (activity) => {
+  const game = activity.game || activity.userGame?.game || {};
+  const userGame = activity.userGame || activity;
+  const actor = activity.user || activity.actor || {};
+
+  if (!game?.title && !userGame?.status) return null;
+
+  return {
+    id: activity.id || `${userGame.gameId || game.rawgId}-${activity.createdAt || userGame.updatedAt}`,
+    actor: actor.username || actor.displayName || 'Player',
+    actorId: actor.id,
+    updatedAt: activity.createdAt || userGame.updatedAt,
+    gameId: game.rawgId || userGame.gameId,
+    game,
+    userGame,
+  };
+};
+
 export const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
+  const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [feedFilter, setFeedFilter] = useState('all');
 
-  useEffect(() => {
-    const fetchLibrary = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await userApi.getUserLibrary(user.id);
-        setGames(data.games || []);
-      } catch (err) {
-        console.error('Failed to fetch library:', err);
-        setError('Failed to load your games');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLibrary();
+  const fetchLibraryFallback = useCallback(async () => {
+    if (!user?.id) return;
+    const data = await userApi.getUserLibrary(user.id);
+    setGames(data.games || []);
   }, [user]);
 
-  // Filter games
-  const filteredGames = games.filter((g) => {
+  const fetchFeed = useCallback(async (targetPage = 1, reset = false) => {
+    try {
+      if (reset) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const response = await followApi.getSocialFeed({ page: targetPage, limit: FEED_PAGE_SIZE, status: filter === 'all' ? undefined : filter.toUpperCase() });
+      const rawItems = response.activities || response.items || response.feed || [];
+      const adapted = rawItems.map(adaptFeedActivity).filter(Boolean);
+
+      if (adapted.length === 0 && targetPage === 1) {
+        setUsingFeed(false);
+        await fetchLibraryFallback();
+        return;
+      }
+
+      setUsingFeed(true);
+      setFeedItems((prev) => (reset ? adapted : [...prev, ...adapted]));
+      setHasMore(Boolean(response.hasMore) || adapted.length >= FEED_PAGE_SIZE);
+      setPage(targetPage);
+    } catch (err) {
+      console.error('Failed to fetch social feed:', err);
+      if (targetPage === 1) {
+        setUsingFeed(false);
+        await fetchLibraryFallback();
+      } else {
+        setError('Failed to load more feed activities');
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [fetchLibraryFallback, filter]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    fetchFeed(1, true);
+  }, [user, fetchFeed]);
+
+  const filteredLibraryGames = useMemo(() => games.filter((g) => {
     if (filter === 'completed') return g.status === 'COMPLETED';
     if (filter === 'playing') return g.status === 'PLAYING';
     if (filter === 'backlog') return g.status === 'BACKLOG';
     return true;
-  });
+  }), [filter, games]);
 
-  // Sort by most recently updated
-  const sortedGames = [...filteredGames].sort(
+  const sortedLibraryGames = useMemo(() => [...filteredLibraryGames].sort(
     (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
-  );
+  ), [filteredLibraryGames]);
+
+  const visibleFeedItems = useMemo(() => {
+    if (filter === 'all') return feedItems;
+    return feedItems.filter((item) => item.userGame?.status === filter.toUpperCase());
+  }, [feedItems, filter]);
 
 
   const socialFilterButtons = [
@@ -103,14 +155,13 @@ export const Home = () => {
 
   return (
     <div>
-      {/* Header */}
       <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-primary pb-4 gap-4">
         <div>
           <h2 className="text-4xl sm:text-5xl font-bold uppercase tracking-tighter text-white">
-            My Games
+            Home Feed
           </h2>
           <p className="text-primary font-bold uppercase tracking-widest mt-2 text-lg">
-            YOUR LIBRARY
+            Social activity first
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -119,8 +170,8 @@ export const Home = () => {
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={`px-4 py-2 rounded font-bold uppercase text-sm transition-colors ${filter === f.key
-                  ? 'bg-primary text-navy'
-                  : 'bg-graphite text-white hover:bg-navy'
+                ? 'bg-primary text-navy'
+                : 'bg-graphite text-white hover:bg-navy'
                 }`}
             >
               {f.label}
@@ -159,35 +210,61 @@ export const Home = () => {
               <div className="p-5 space-y-3">
                 <div className="h-6 bg-graphite rounded w-2/3" />
                 <div className="h-4 bg-graphite rounded w-1/2" />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="h-16 bg-graphite/30 rounded" />
-                  <div className="h-16 bg-graphite/30 rounded" />
-                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="text-center py-16">
-          <span className="material-symbols-outlined text-crimson text-6xl mb-4 block">error</span>
-          <p className="text-gray-400 font-bold uppercase tracking-wider">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-6 py-2 bg-primary text-navy rounded font-bold uppercase text-sm"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {error && <p className="text-crimson mb-4 text-sm font-bold uppercase">{error}</p>}
 
-      {/* Games Grid */}
-      {!loading && !error && (
+      {!loading && usingFeed && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {sortedGames.map((userGame) => {
+            {visibleFeedItems.map((item) => {
+              const game = item.game || {};
+              const userGame = item.userGame || {};
+              return (
+                <div key={item.id} onClick={() => navigate(`/game/${item.gameId}`)} className="cursor-pointer">
+                  <SessionCard
+                    title={game.title || 'Unknown Game'}
+                    image={game.coverImage || game.cover || ''}
+                    imageAlt={game.title || 'Game cover'}
+                    result={statusToResult[userGame.status] || 'progress'}
+                    timeAgo={timeAgo(item.updatedAt)}
+                    platform={game.platforms?.[0] || 'PC'}
+                    description={[`@${item.actor}`, statusLabel[userGame.status] || userGame.status || 'UPDATED'].join(' • ')}
+                    stats={[
+                      { label: 'Status', value: statusLabel[userGame.status] || userGame.status || 'UPDATED' },
+                      { label: 'Rating', value: userGame.rating ? `${userGame.rating}/10` : 'N/A' },
+                    ]}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {visibleFeedItems.length === 0 && <p className="text-gray-500 font-bold uppercase text-sm">No activities for this filter yet.</p>}
+
+          {hasMore && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => fetchFeed(page + 1)}
+                disabled={loadingMore}
+                className="px-6 py-3 bg-primary text-navy rounded font-bold uppercase text-sm disabled:opacity-60"
+              >
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {!loading && !usingFeed && (
+        <>
+          <p className="text-gray-500 font-bold uppercase text-sm mb-4">Feed unavailable, showing your library.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {sortedLibraryGames.map((userGame) => {
               const game = userGame.game || {};
               return (
                 <div key={userGame.id} onClick={() => navigate(`/game/${game.rawgId || userGame.gameId}`)} className="cursor-pointer">
@@ -198,51 +275,16 @@ export const Home = () => {
                     result={statusToResult[userGame.status] || 'progress'}
                     timeAgo={timeAgo(userGame.updatedAt)}
                     platform={game.platforms?.[0] || 'PC'}
-                    description={[
-                      statusLabel[userGame.status],
-                      ...(game.genres?.slice(0, 2) || []),
-                    ].join(' • ')}
+                    description={[statusLabel[userGame.status], ...(game.genres?.slice(0, 2) || [])].join(' • ')}
                     stats={[
-                      {
-                        label: 'Status',
-                        value: statusLabel[userGame.status] || userGame.status,
-                        color: userGame.status === 'COMPLETED' ? 'primary' : userGame.status === 'ABANDONED' ? 'crimson' : undefined,
-                      },
-                      {
-                        label: 'Rating',
-                        value: userGame.rating ? `${userGame.rating}/10` : 'N/A',
-                        highlight: !!userGame.rating,
-                        color: userGame.rating ? 'primary' : undefined,
-                      },
+                      { label: 'Status', value: statusLabel[userGame.status] || userGame.status },
+                      { label: 'Rating', value: userGame.rating ? `${userGame.rating}/10` : 'N/A' },
                     ]}
-                    footer={{
-                      left: (
-                        <span className="text-xs font-bold uppercase text-gray-500">
-                          {game.developer || game.platforms?.join(', ') || ''}
-                        </span>
-                      ),
-                    }}
                   />
                 </div>
               );
             })}
           </div>
-
-          {sortedGames.length === 0 && (
-            <div className="text-center py-16">
-              <span className="material-symbols-outlined text-graphite text-6xl mb-4 block">sports_esports</span>
-              <p className="text-gray-500 font-bold uppercase tracking-wider mb-2">
-                {filter === 'all' ? 'No games in your library yet' : `No ${filter} games`}
-              </p>
-              <p className="text-gray-600 text-sm mb-4">Start by discovering and adding games to your collection</p>
-              <button
-                onClick={() => navigate('/discover')}
-                className="px-6 py-3 bg-primary text-navy rounded font-bold uppercase text-sm hover:bg-yellow-400 transition-colors"
-              >
-                Discover Games
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>
