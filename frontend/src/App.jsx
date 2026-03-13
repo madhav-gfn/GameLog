@@ -8,6 +8,7 @@ import { Discover } from './pages/Discover';
 import { GameDetail } from './pages/GameDetail';
 import { Library } from './pages/Library';
 import { Profile } from './pages/Profile';
+import { SearchResults } from './pages/SearchResults';
 import { AppShell } from './components/layout/AppShell';
 import './App.css';
 
@@ -37,6 +38,7 @@ const AppContent = () => {
         <Route path="/game/:gameId" element={<GameDetail />} />
         <Route path="/library" element={<Library />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/search" element={<SearchResults />} />
       </Routes>
     </AppShell>
   );
