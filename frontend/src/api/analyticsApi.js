@@ -6,9 +6,10 @@ export const analyticsApi = {
         return api.get('/analytics/overview', { params });
     },
 
-    // Get playtime stats
+    // Get playtime stats via overview.games to keep one canonical analytics contract
     async getPlaytimeStats(params = {}) {
-        return api.get('/analytics/playtime', { params });
+        const overview = await api.get('/analytics/overview', { params });
+        return overview.games;
     },
 
     // Get game stats

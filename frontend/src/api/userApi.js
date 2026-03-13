@@ -11,8 +11,9 @@ export const userApi = {
         return api.get(`/users/${userId}/library`, { params });
     },
 
-    // Get user's activity feed
-    async getUserActivity(userId, params = {}) {
-        return api.get(`/users/${userId}/activity`, { params });
+    // Get authenticated user's social activity feed from existing follow endpoint
+    // userId is kept for backwards compatibility and intentionally ignored.
+    async getUserActivity(_userId, params = {}) {
+        return api.get('/follow/feed', { params });
     },
 };
