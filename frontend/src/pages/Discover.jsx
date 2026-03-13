@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Layout';
 import { GameCard } from '../components/GameCard';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { gameApi } from '../api/gameApi';
 
+const adaptSectionGames = (response) => response?.games || response?.items || [];
+
 export const Discover = () => {
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [genres, setGenres] = useState([]);
   const [platforms, setPlatforms] = useState([]);
+  const [modules, setModules] = useState({ trending: [], topRated: [], recent: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -23,14 +26,23 @@ export const Discover = () => {
         setLoading(true);
         setError(null);
 
-        const gameData = await gameApi.getGames({ sortBy });
-        setGames(gameData.games || []);
+        const [defaultGames, genreData, platformData, trendingRes, topRatedRes, recentRes] = await Promise.all([
+          gameApi.getGames({ sortBy: 'rating' }),
+          gameApi.getGenres(),
+          gameApi.getPlatforms(),
+          gameApi.getGames({ sortBy: 'popularity', limit: 8 }),
+          gameApi.getGames({ sortBy: 'rating', limit: 8 }),
+          gameApi.getGames({ sortBy: 'year', limit: 8 }),
+        ]);
 
-        const genreData = await gameApi.getGenres();
-        const platformData = await gameApi.getPlatforms();
-
+        setGames(defaultGames.games || []);
         setGenres(genreData.genres || []);
         setPlatforms(platformData.platforms || []);
+        setModules({
+          trending: adaptSectionGames(trendingRes),
+          topRated: adaptSectionGames(topRatedRes),
+          recent: adaptSectionGames(recentRes),
+        });
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load games. Make sure the backend is running.');
@@ -61,9 +73,15 @@ export const Discover = () => {
     fetchFilteredGames();
   }, [selectedGenre, selectedPlatform, sortBy]);
 
+  const moduleConfig = useMemo(() => ([
+    { key: 'trending', title: 'Trending now', subtitle: 'Most played by the community' },
+    { key: 'topRated', title: 'Top rated picks', subtitle: 'Highest scored experiences' },
+    { key: 'recent', title: 'Fresh releases', subtitle: 'Recently launched games' },
+  ]), []);
+
   return (
     <div>
-      <Header title="Discover" subtitle="Browse the latest and greatest games" />
+      <Header title="Discover" subtitle="Explore by modules, then drill into filters" />
 
       {error && (
         <div className="mb-6 p-4 bg-crimson/10 border-2 border-crimson rounded text-crimson font-bold text-sm">
@@ -72,7 +90,28 @@ export const Discover = () => {
         </div>
       )}
 
-      {/* Filters */}
+      <section className="space-y-8 mb-10">
+        {moduleConfig.map((module) => (
+          <div key={module.key}>
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{module.title}</h2>
+                <p className="text-gray-500 text-sm uppercase">{module.subtitle}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {(modules[module.key] || []).slice(0, 4).map((game) => (
+                <GameCard
+                  key={`${module.key}-${game.id}`}
+                  game={game}
+                  onClick={() => navigate(`/game/${game.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div>
           <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Genre</label>
@@ -119,13 +158,13 @@ export const Discover = () => {
         </div>
       </div>
 
-      {/* Games Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <LoadingSkeleton count={12} />
         </div>
       ) : (
         <>
+          <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">All discover results</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {games.map((game) => (
               <GameCard
