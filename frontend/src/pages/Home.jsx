@@ -3,19 +3,15 @@ import { SocialFeed } from '../components/SocialFeed';
 
 export const Home = () => {
   const socialFilterButtons = useMemo(() => ([
-    { key: 'all', label: 'All' },
-    { key: 'friends', label: 'Friends' },
-    { key: 'following', label: 'Following' },
+    { key: 'all', label: 'Recent' },
     { key: 'popular', label: 'Popular' },
-    { key: 'platform', label: 'Platform' },
-    { key: 'status', label: 'Status' },
   ]), []);
 
   const [feedFilter, setFeedFilter] = React.useState('all');
 
   return (
     <div>
-      <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end border-b-4 border-primary pb-4 gap-4">
+      <header className="mb-8 flex flex-col sm:flex-row justify-between items-baseline border-b-4 border-primary pb-4 gap-4">
         <div>
           <h2 className="text-4xl sm:text-5xl font-bold uppercase tracking-tighter text-white">
             Home Feed

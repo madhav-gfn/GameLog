@@ -50,7 +50,7 @@ export const SearchBar = ({ onSearch, placeholder = 'Search games, people, lists
         const nextSuggestions = {
           games: response?.games?.games?.slice(0, MAX_AUTOCOMPLETE_ITEMS) || [],
           users: response?.users?.users?.slice(0, MAX_AUTOCOMPLETE_ITEMS) || [],
-          lists: Array.isArray(response?.lists) ? response.lists.slice(0, MAX_AUTOCOMPLETE_ITEMS) : [],
+          lists: response?.lists?.lists?.slice(0, MAX_AUTOCOMPLETE_ITEMS) || [],
         };
 
         setSuggestions(nextSuggestions);

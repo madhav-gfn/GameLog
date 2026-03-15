@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userApi } from '../api/userApi';
 import { analyticsApi } from '../api/analyticsApi';
@@ -19,44 +19,61 @@ const adaptStats = (profile, analytics, social, listCount) => ({
 
 export const Profile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetUserId = searchParams.get('user');
   const { user } = useAuth();
+  
+  const profileUserId = targetUserId || user?.id;
   const [activeTab, setActiveTab] = useState('Overview');
   const [userLibrary, setUserLibrary] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 });
   const [listCount, setListCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user?.id) {
+      if (!profileUserId) {
         setLoading(false);
         return;
       }
       try {
         setLoading(true);
 
-        const [libraryRes, profileRes, analyticsRes, followersRes, followingRes, listsRes] = await Promise.allSettled([
-          userApi.getUserLibrary(user.id),
-          userApi.getUserProfile(user.id),
-          analyticsApi.getOverview(),
-          followApi.getFollowers(user.id, { limit: 1 }),
-          followApi.getFollowing(user.id, { limit: 1 }),
-          listApi.getUserLists(user.id),
-        ]);
+        const fetchPromises = [
+          userApi.getUserLibrary(profileUserId),
+          userApi.getUserProfile(profileUserId),
+          analyticsApi.getOverview({ userId: profileUserId }),
+          followApi.getFollowers(profileUserId, { limit: 1 }),
+          followApi.getFollowing(profileUserId, { limit: 1 }),
+          listApi.getUserLists(profileUserId),
+        ];
+
+        // Fetch follow status if viewing someone else
+        if (user?.id && profileUserId !== user.id) {
+          fetchPromises.push(followApi.checkFollowStatus(profileUserId));
+        } else {
+          fetchPromises.push(Promise.resolve(null)); // Placeholder to keep array length
+        }
+
+        const [libraryRes, profileRes, analyticsRes, followersRes, followingRes, listsRes, followStatusRes] = await Promise.allSettled(fetchPromises);
 
         if (libraryRes.status === 'fulfilled') setUserLibrary(libraryRes.value.games || []);
 
         if (profileRes.status === 'fulfilled') {
           setUserProfile(profileRes.value);
-        } else {
+        } else if (profileUserId === user?.id && user) {
           setUserProfile({
             username: user.username || user.displayName || user.email?.split('@')[0] || 'Player',
             avatar: user.avatar || null,
             bio: user.bio || 'No bio yet',
           });
+        } else {
+          setUserProfile(null);
         }
 
         if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value?.data || analyticsRes.value);
@@ -72,6 +89,12 @@ export const Profile = () => {
           setListCount(lists.length || 0);
         }
 
+        if (followStatusRes && followStatusRes.status === 'fulfilled' && followStatusRes.value) {
+          setIsFollowing(followStatusRes.value.isFollowing || false);
+        } else {
+          setIsFollowing(false);
+        }
+
         setError(null);
       } catch (err) {
         console.error('Failed to fetch user data:', err);
@@ -81,10 +104,30 @@ export const Profile = () => {
       }
     };
     fetchUserData();
-  }, [user]);
+  }, [profileUserId, user]);
 
-  const displayName = userProfile?.displayName || userProfile?.username || user?.email?.split('@')[0] || 'Player';
-  const avatarUrl = userProfile?.avatar || user?.avatar;
+  const toggleFollow = async () => {
+    if (!user?.id || followLoading) return;
+    try {
+      setFollowLoading(true);
+      if (isFollowing) {
+        await followApi.unfollowUser(profileUserId);
+        setIsFollowing(false);
+        setSocialCounts(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
+      } else {
+        await followApi.followUser(profileUserId);
+        setIsFollowing(true);
+        setSocialCounts(prev => ({ ...prev, followers: prev.followers + 1 }));
+      }
+    } catch (err) {
+      console.error('Failed to toggle follow status', err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const displayName = userProfile?.displayName || userProfile?.username || (profileUserId === user?.id ? (user?.email?.split('@')[0] || 'Player') : 'Player');
+  const avatarUrl = userProfile?.avatar || (profileUserId === user?.id ? user?.avatar : null);
   const avatarLetter = displayName[0]?.toUpperCase() || 'P';
   const gameStats = analytics?.games || {};
   const stats = adaptStats(userProfile, analytics, socialCounts, listCount);
@@ -123,6 +166,19 @@ export const Profile = () => {
               <p className="text-gray-300 text-sm">{userProfile.bio || 'No bio yet'}</p>
             </div>
           </div>
+          {user?.id && profileUserId !== user.id && (
+            <button
+              onClick={toggleFollow}
+              disabled={followLoading}
+              className={`px-6 py-2 rounded font-bold uppercase tracking-wider transition-colors border-2 ${
+                isFollowing 
+                ? 'bg-transparent text-white border-gray-500 hover:border-white' 
+                : 'bg-primary text-navy border-primary hover:bg-transparent hover:text-primary'
+              } disabled:opacity-50`}
+            >
+              {followLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -204,7 +260,7 @@ export const Profile = () => {
           </div>
         )}
 
-        {activeTab === 'Lists' && <ListsManager userId={user.id} />}
+        {activeTab === 'Lists' && <ListsManager userId={profileUserId} />}
       </div>
     </div>
   );

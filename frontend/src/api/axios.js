@@ -25,12 +25,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response.data, // Return data directly for convenience
     (error) => {
-        // Optional: Handle 401 Unauthorized globally (e.g., clear token, redirect to login)
-        // if (error.response && error.response.status === 401) {
-        //   localStorage.removeItem('token');
-        //   localStorage.removeItem('user');
-        //   window.location.href = '/login';
-        // }
+        // Pass through request cancellation and network errors unchanged
+        if (axios.isCancel(error) || !error.response) {
+            return Promise.reject(error);
+        }
 
         // Extract error message from backend response
         const data = error.response?.data;

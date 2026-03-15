@@ -30,7 +30,7 @@ export const GameCard = ({ game, onClick, compact = false, loading = false, erro
           <img src={game.coverImage || game.cover} alt={game.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" onError={(e) => { e.target.src = fallbackSvg; }} />
         </div>
         <div className="p-3">
-          <h3 className="text-xs font-bold text-white truncate uppercase group-hover:text-primary transition-colors">{game.title}</h3>
+          <h3 className="text-xs font-bold text-white line-clamp-2 h-8 uppercase group-hover:text-primary transition-colors">{game.title}</h3>
           {game.releaseYear && <p className="text-xs text-gray-500 mt-1">{game.releaseYear}</p>}
         </div>
       </div>

@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { gameApi } from '../../api/gameApi';
 import { Sidebar } from '../Sidebar';
-import { RightPanel } from '../RightPanel';
 import { ThemeToggle } from '../ThemeToggle';
 import { SearchBar } from '../SearchBar';
 import { NotificationDropdown } from '../NotificationDropdown';
 import { LogModal } from '../LogModal';
+import { ProfileDropdown } from '../ProfileDropdown';
 
 const navItems = [
   { path: '/', label: 'Home', icon: 'home' },
@@ -43,38 +43,28 @@ const MobileBottomNav = () => {
 };
 
 const NavBar = ({ onOpenLog }) => {
-  const { user, logout } = useAuth();
-
   return (
-    <header className="h-16 bg-navy border-b-2 border-graphite px-4 sm:px-6 flex items-center gap-4">
-      <Link to="/" className="flex items-center gap-3 hover:no-underline">
-        <span className="material-symbols-outlined text-primary text-3xl">sports_esports</span>
-        <div>
-          <h1 className="text-white text-lg font-bold uppercase tracking-widest leading-none">GAMELOG</h1>
-          <p className="text-primary text-[10px] uppercase tracking-[0.2em]">Control Center</p>
+    <header className="bg-navy border-b-2 border-graphite px-4 sm:px-6">
+      <div className="flex h-16 w-full items-center gap-4">
+        <Link to="/" className="flex items-center gap-3 hover:no-underline">
+          <span className="material-symbols-outlined text-primary text-3xl">sports_esports</span>
+          <div>
+            <h1 className="text-white text-lg font-bold uppercase tracking-widest leading-none">GAMELOG</h1>
+            <p className="text-primary text-[10px] uppercase tracking-[0.2em]">Control Center</p>
+          </div>
+        </Link>
+
+        <div className="flex-1 min-w-0 max-w-2xl">
+          <SearchBar className="w-full" />
         </div>
-      </Link>
 
-      <div className="flex-1 max-w-xl">
-        <SearchBar className="w-full" />
-      </div>
-
-      <div className="flex items-center gap-3 ml-auto">
-        <button onClick={onOpenLog} className="hidden md:inline-flex px-3 py-2 rounded bg-crimson text-white text-xs font-bold uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-primary">
-          New log (N)
-        </button>
-        <NotificationDropdown />
-        <ThemeToggle />
-        <div className="hidden sm:flex items-center gap-3">
-          <span className="text-gray-300 font-semibold text-sm uppercase tracking-wider">
-            {user?.username || user?.displayName || user?.email?.split('@')[0] || 'Player'}
-          </span>
-          <button
-            onClick={logout}
-            className="text-sm font-bold uppercase tracking-wider text-gray-300 hover:text-crimson transition-colors"
-          >
-            Logout
+        <div className="ml-auto flex items-center gap-3">
+          <button onClick={onOpenLog} className="hidden md:inline-flex px-3 py-2 rounded bg-crimson text-white text-xs font-bold uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-primary">
+            New log (N)
           </button>
+          <NotificationDropdown />
+          <ThemeToggle />
+          <ProfileDropdown />
         </div>
       </div>
     </header>
@@ -86,6 +76,9 @@ export const AppShell = ({ children }) => {
   const navigate = useNavigate();
   const [logOpen, setLogOpen] = useState(false);
   const [toast, setToast] = useState('');
+  const [sidebarPinned, setSidebarPinned] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
+  const sidebarExpanded = sidebarPinned || sidebarHovered;
 
   useEffect(() => {
     let awaitingGoTarget = false;
@@ -146,18 +139,30 @@ export const AppShell = ({ children }) => {
     <div className="app-shell h-screen bg-background-dark text-white overflow-hidden">
       <NavBar onOpenLog={() => setLogOpen(true)} />
 
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        <aside className="w-[220px] shrink-0 max-[800px]:hidden bg-navy border-r-2 border-graphite overflow-hidden">
-          <Sidebar onCreateLog={() => setLogOpen(true)} />
+      <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
+        <aside
+          className={`shrink-0 overflow-hidden border-r-2 border-graphite bg-navy transition-[width] duration-300 max-[800px]:hidden ${sidebarExpanded ? 'w-[260px]' : 'w-[88px]'}`}
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+        >
+          <Sidebar
+            expanded={sidebarExpanded}
+            pinned={sidebarPinned}
+            onTogglePinned={() => {
+              if (sidebarPinned) {
+                setSidebarPinned(false);
+                setSidebarHovered(false);
+              } else {
+                setSidebarPinned(true);
+              }
+            }}
+            onCreateLog={() => setLogOpen(true)}
+          />
         </aside>
 
-        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 md:p-8 max-[800px]:pb-24">
+        <main className="flex-1 min-w-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8 max-[800px]:pb-24">
           <div className="page-content">{children}</div>
         </main>
-
-        <div className="w-[300px] shrink-0 max-[1100px]:hidden overflow-hidden">
-          <RightPanel />
-        </div>
       </div>
 
       {toast && <div className="fixed top-20 right-4 z-[60] bg-primary text-navy px-4 py-2 rounded font-bold uppercase text-xs">{toast}</div>}

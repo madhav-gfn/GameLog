@@ -18,14 +18,9 @@ export const SocialFeed = ({ filter = 'all' }) => {
 
   const filteredActivities = useMemo(() => {
     const normalizedFilter = filter.toLowerCase();
-    const base = feed.filter((activity) => {
-      if (normalizedFilter === 'platform') return Boolean(activity.platform);
-      if (normalizedFilter === 'status') return Boolean(activity.status);
-      return true;
-    });
 
     if (normalizedFilter === 'popular') {
-      return [...base].sort((a, b) => {
+      return [...feed].sort((a, b) => {
         const scoreA = (a.likeCount || 0) + (a.rating || 0);
         const scoreB = (b.likeCount || 0) + (b.rating || 0);
         if (scoreA !== scoreB) return scoreB - scoreA;
@@ -33,7 +28,7 @@ export const SocialFeed = ({ filter = 'all' }) => {
       });
     }
 
-    return base;
+    return feed;
   }, [feed, filter]);
 
   const hasMore = feedPagination.page < feedPagination.pages;

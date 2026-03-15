@@ -32,6 +32,7 @@ export const normalizeFeedActivity = (activity = {}) => {
     id: activity.id || `${rawUserGame.gameId || game.rawgId}-${activity.createdAt || rawUserGame.updatedAt || Date.now()}`,
     actor: actor.username || actor.displayName || activity.actorName || 'Player',
     actorId: actor.id || activity.userId || null,
+    user: actor,
     type: activity.type || 'library_update',
     timestamp: activity.createdAt || rawUserGame.updatedAt || new Date().toISOString(),
     status: rawUserGame.status || null,

@@ -131,25 +131,9 @@ export async function isFollowing(followerId, followingId) {
  * Queries UserGame logs and Reviews instead of Activity model.
  */
 export async function getSocialFeed(userId, page = 1, limit = 20) {
-    // Get IDs of followed users
-    const follows = await prisma.follow.findMany({
-        where: { followerId: userId },
-        select: { followingId: true },
-    });
-
-    const followingIds = follows.map((f) => f.followingId);
-
-    if (followingIds.length === 0) {
-        return {
-            activities: [],
-            pagination: { page, limit, total: 0, pages: 0 },
-        };
-    }
-
-    // Fetch recent game logs and reviews from followed users in parallel
+    // Fetch recent game logs and reviews from ALL users in parallel for a global feed
     const [recentLogs, recentReviews] = await Promise.all([
         prisma.userGame.findMany({
-            where: { userId: { in: followingIds } },
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
                 game: { select: { id: true, title: true, coverImage: true } },
@@ -158,7 +142,6 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
             take: limit * 2, // Fetch extra to merge with reviews
         }),
         prisma.review.findMany({
-            where: { userId: { in: followingIds } },
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
                 game: { select: { id: true, title: true, coverImage: true } },

@@ -15,6 +15,7 @@ const DEFAULT_FORM = {
   rating: '',
   reviewText: '',
   screenshotUrl: '',
+  platforms: [],
 };
 
 const toDateInputValue = (value) => {
@@ -49,6 +50,7 @@ export const LogModal = ({
       ...initialData,
       playedAt: toDateInputValue(initialData?.playedAt),
       reviewText: initialData?.reviewText || '',
+      platforms: initialData?.platforms || [],
     });
   }, [initialData]);
 
@@ -211,7 +213,14 @@ export const LogModal = ({
                         type="button"
                         key={game.id}
                         onClick={() => {
-                          setForm((prev) => ({ ...prev, gameId: String(game.id), gameTitle: game.title || game.name || '' }));
+                          const platforms = game.platforms || [];
+                          setForm((prev) => ({ 
+                            ...prev, 
+                            gameId: String(game.id), 
+                            gameTitle: game.title || game.name || '',
+                            platforms,
+                            platform: platforms.includes(prev.platform) ? prev.platform : (platforms[0] || '')
+                          }));
                           setGameResults([]);
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-white hover:bg-navy"
@@ -224,7 +233,16 @@ export const LogModal = ({
               </label>
 
               <label className="block text-sm text-gray-300">Platform
-                <input value={form.platform} onChange={(e) => setField('platform', e.target.value)} className="mt-1 w-full bg-graphite text-white rounded p-2" aria-label="Platform" />
+                {form.platforms && form.platforms.length > 0 ? (
+                  <select value={form.platform} onChange={(e) => setField('platform', e.target.value)} className="mt-1 w-full bg-graphite text-white rounded p-2" aria-label="Platform">
+                    <option value="">Select Platform</option>
+                    {form.platforms.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input value={form.platform} onChange={(e) => setField('platform', e.target.value)} className="mt-1 w-full bg-graphite text-white rounded p-2" aria-label="Platform" placeholder="Enter platform" />
+                )}
               </label>
 
               <label className="block text-sm text-gray-300">Status

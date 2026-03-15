@@ -61,12 +61,12 @@ export const FeedCard = ({ item, onOpenGame }) => {
             alt={`${displayName} avatar`}
             className="w-11 h-11 rounded-full object-cover border border-gray-700"
           />
-          <div className="min-w-0">
-            <p className="text-sm text-gray-300 truncate">
-              <span className="font-bold text-white">{displayName}</span>{' '}
-              <span className="text-gray-400">@{username}</span>{' '}
-              <span className="text-primary font-semibold">{actionVerb}</span>
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-bold text-white whitespace-nowrap">{displayName}</span>
+              <span className="text-gray-400 text-xs">@{username}</span>
+              <span className="text-primary font-semibold text-xs uppercase">{actionVerb}</span>
+            </div>
             <p className="text-xs text-gray-500">{formatDate(item.timestamp)}</p>
           </div>
         </div>

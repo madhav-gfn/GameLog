@@ -340,6 +340,7 @@ export const GameDetail = () => {
           gameTitle: game?.title || '',
           status: userGame?.status || 'BACKLOG',
           platform: userGame?.platform || '',
+          platforms: game?.platforms || [],
           playtimeHours: userGame?.playtimeHours ?? '',
           progressPercent: userGame?.progressPercent ?? '',
           playedAt: userGame?.playedAt || '',
