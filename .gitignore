@@ -45,4 +45,4 @@ build/
 .agent
 skills-lock.json
 .superpowers
-/docs
+docs/
