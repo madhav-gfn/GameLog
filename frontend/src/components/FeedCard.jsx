@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion as Motion, useReducedMotion } from '../utils/motionCompat';
 import { RatingStars } from './RatingStars';
 import {
@@ -28,6 +29,7 @@ const formatPlaytime = (hours) => {
 /** @param {{item:any, onOpenGame?: (game:any)=>void}} props */
 export const FeedCard = ({ item, onOpenGame }) => {
   const reduceMotion = useReducedMotion();
+  const navigate = useNavigate();
   const actionVerb = actionLabelByType[item.type] || 'shared';
   const displayName = item.user?.displayName || item.user?.username || 'Unknown Player';
   const username = item.user?.username || 'unknown';
@@ -43,6 +45,12 @@ export const FeedCard = ({ item, onOpenGame }) => {
   const handleLike = () => {
     setLiked((prev) => !prev);
     if (!reduceMotion) setIsLikePopping(true);
+  };
+
+  const handleViewProfile = () => {
+    if (item.user?.id) {
+      navigate(`/profile?user=${item.user.id}`);
+    }
   };
 
   return (
@@ -72,8 +80,11 @@ export const FeedCard = ({ item, onOpenGame }) => {
         </div>
 
         <div className="hidden group-hover:flex items-center gap-2">
-          <button className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-200 hover:bg-primary hover:text-navy transition-colors">View profile</button>
-          <button className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-200 hover:bg-primary hover:text-navy transition-colors">Share</button>
+          {item.user?.id && (
+            <button onClick={handleViewProfile} className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-200 hover:bg-primary hover:text-navy transition-colors">
+              View profile
+            </button>
+          )}
         </div>
       </header>
 
@@ -119,7 +130,6 @@ export const FeedCard = ({ item, onOpenGame }) => {
         >
           ♥ {liked ? 'Liked' : 'Like'}
         </Motion.button>
-        <button className="hover:text-primary transition-colors">💬 Comment</button>
       </footer>
     </Motion.article>
   );
