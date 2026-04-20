@@ -12,9 +12,9 @@ import { ProfileDropdown } from '../ProfileDropdown';
 const navItems = [
   { path: '/', label: 'Home', icon: 'home' },
   { path: '/discover', label: 'Discover', icon: 'explore' },
+  { path: '/recommend', label: 'AI Pick', icon: 'auto_awesome' },
   { path: '/library', label: 'Library', icon: 'library_books' },
   { path: '/profile', label: 'Profile', icon: 'person' },
-  { path: '/notifications', label: 'Alerts', icon: 'notifications' },
 ];
 
 const MobileBottomNav = () => {

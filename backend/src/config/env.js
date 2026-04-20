@@ -15,4 +15,5 @@ export const {
     GOOGLE_CLIENT_SECRET,
     SESSION_SECRET,
     FRONTEND_URL,
+    GEMINI_API_KEY,
 } = process.env;

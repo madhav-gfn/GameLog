@@ -8,3 +8,4 @@ export { Profile } from './Profile';
 
 export { SearchResults } from './SearchResults';
 export { Notifications } from './Notifications';
+export { Recommend } from './Recommend';

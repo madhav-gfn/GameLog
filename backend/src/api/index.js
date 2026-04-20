@@ -8,6 +8,7 @@ import listRoutes from '../routes/list.routes.js';
 import reviewRoutes from '../routes/review.routes.js';
 import notificationRoutes from '../routes/notification.routes.js';
 import searchRoutes from '../routes/search.routes.js';
+import recommendRoutes from '../routes/recommend.routes.js';
 
 const router = express.Router();
 
@@ -21,5 +22,6 @@ router.use('/lists', listRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/search', searchRoutes);
+router.use('/recommend', recommendRoutes);
 
 export { router as apiRoutes };

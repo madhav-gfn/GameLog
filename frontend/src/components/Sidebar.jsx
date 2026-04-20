@@ -6,6 +6,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: 'grid_view' },
   { path: '/library', label: 'Library', icon: 'library_books' },
   { path: '/discover', label: 'Discover', icon: 'monitoring' },
+  { path: '/recommend', label: 'Find My Game', icon: 'auto_awesome' },
   { path: '/profile', label: 'Profile', icon: 'person' },
   { path: '/notifications', label: 'Notifications', icon: 'notifications' },
 ];
