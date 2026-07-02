@@ -7,64 +7,84 @@
 ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-GameLog is a full-stack web application designed as the ultimate hub for gamers. Often described as **"Letterboxd for video games"**, it allows users to track their gaming backlogs, rate titles, discover new experiences, and seamlessly connect with friends in a community-driven environment.
+GameLog is a full-stack gaming journal and discovery app. It mixes a social feed, personal game tracking, review writing, analytics, and AI-powered recommendations into one place. The easiest shorthand is still “Letterboxd for video games,” but the app is really a complete backlog manager with a social layer and a recommendation engine built around real game data.
 
-## ✨ Features
 
-- **Extensive Database Integration**: Instantly search and fetch rich, real-time game metadata via the powerful [RAWG API](https://rawg.io/apidocs).
-- **Personalized Library Management**: Organize your gaming journey using custom statuses:
-  - 🌟 *Wishlist*
-  - 📚 *Backlog*
-  - 🕹️ *Playing*
-  - ✅ *Completed*
-  - 🛑 *Abandoned*
-- **Social Ecosystem**: Keep up with friends via a dynamic social feed. Follow users, comment on reviews, and like updates.
-- **Deep Analytics**: Gain insights into your gaming habits with interactive visualizations powered by Chart.js. Track rating distributions and playtime statistics!
-- **OAuth Authentication**: Robust and secure user authentication via Passport.js (Google OAuth & local session management).
+## Casual Retrospective
 
----
 
-## 🏗️ System Architecture
+From December into February, the main thing I solved was the feeling that the app had data, but not enough direction. The library and review flows already worked, but everything felt like separate screens instead of one connected game log. I tightened the structure so the whole thing reads more like a single journey: discover a game, save it, play it, talk about it, and then see what that history means later.
 
-GameLog follows a decoupled client-server architecture, relying on REST APIs for frontend-backend communication. The backend connects directly to a PostgreSQL database via Prisma ORM while bridging external data from the RAWG API.
+The recommendation system was the part that finally made the app feel opinionated. Instead of throwing random AI output at the user, it now starts with real RAWG results, filters them by the user’s answers, and only then lets the model rank and explain the picks. That gave the feature a better personality. It feels less like a chatbot and more like a game clerk who actually knows the shelf.
+
+By February, the experience felt much more complete. The social feed, analytics, and recommendation quiz stopped feeling like extras and started behaving like the same product. The app now has a cleaner rhythm, better guardrails, and a more obvious reason to exist beyond just storing game data.
+
+## What The App Does
+
+GameLog lets a user search games, save them to a personal library, track status changes, rate what they played, write reviews, and follow other players. The app also shows charts and summaries so people can see patterns in their taste over time. On top of that, the recommendation page asks a short quiz and returns three curated games that fit the answer set.
+
+Think of the product like this:
+
+```mermaid
+flowchart LR
+    A[Discover games] --> B[Save to library]
+    B --> C[Rate and review]
+    C --> D[Share activity]
+    D --> E[Follow friends]
+    A --> F[Take recommendation quiz]
+    F --> G[Get 3 matched games]
+```
+
+## How Everything Works
+
+The frontend is a React app built with Vite and styled with Tailwind CSS. It handles the quiz, the social UI, the charts, the review flows, and the navigation between pages. The backend is an Express API that handles authentication, game search, list management, reviews, notifications, analytics, and recommendations. Prisma sits in the middle as the type-safe bridge to PostgreSQL.
 
 ```mermaid
 graph TD
-    subgraph Frontend Application
-        UI[React 19 UI Components<br>Tailwind CSS + Framer Motion]
-        Charts[Data Visualization<br>Chart.js]
-        Vite[Vite Bundler]
+    subgraph Frontend
+        UI[React pages and components]
+        QUIZ[Recommendation quiz]
+        CHARTS[Analytics charts]
     end
 
-    subgraph Backend Services
-        API[Express.js REST API]
-        Auth[Passport.js Auth<br>Google OAuth 2.0]
-        ORM[Prisma ORM]
+    subgraph Backend
+        API[Express REST API]
+        AUTH[Passport sessions and OAuth]
+        REC[Recommendation service]
+        DBL[Prisma data layer]
     end
 
     subgraph External Systems
-        DB[(PostgreSQL Database)]
-        RAWG{RAWG.io API}
-        GoogleAuth{Google Auth Provider}
+        DB[(PostgreSQL)]
+        RAWG{RAWG API}
+        GROQ{Groq AI}
+        GOOGLE{Google OAuth}
     end
 
-    %% Connections
-    UI -- "REST calls (Axios)" --> API
-    API -- "CRUD Operations" --> ORM
-    ORM -- "Queries/Mutations" --> DB
-    
-    API -- "Fetch Game Metadata" --> RAWG
-    Auth -- "OAuth Flow" --> GoogleAuth
-    API -- "Validate Sessions" --> Auth
-    
-    UI --- Charts
+    UI --> API
+    QUIZ --> API
+    CHARTS --> API
+    API --> AUTH
+    API --> REC
+    API --> DBL
+    DBL --> DB
+    REC --> RAWG
+    REC --> GROQ
+    AUTH --> GOOGLE
 ```
 
----
+### Main User Loop
 
-## 🗄️ Database Schema
+1. A user signs in through the auth flow.
+2. They search for a game or browse social content.
+3. They add games to their list and update statuses like wishlist, backlog, playing, completed, or abandoned.
+4. They rate games, leave reviews, and interact with other users.
+5. Analytics turn that history into charts and summaries.
+6. The recommendation quiz turns the user’s mood and preferences into three concrete game picks.
 
-The core foundation relies on a relational Postgres database, mapping users, their game correlations, reviews, social graph (follower dynamics), and real-time notifications.
+## Data Model
+
+The database centers on users, games, their library entries, reviews, follows, likes, comments, notifications, and lists. The goal is to preserve a clean social graph while still keeping the core game-tracking experience fast and easy to query.
 
 ```mermaid
 erDiagram
@@ -74,15 +94,14 @@ erDiagram
     USER ||--o{ COMMENT : posts
     USER ||--o{ LIKE : gives
     USER ||--o{ NOTIFICATION : receives
-    USER ||--o{ FOLLOW : "follows / followed by"
+    USER ||--o{ FOLLOW : follows
 
-    GAME ||--o{ USER_GAME : tracked_by
+    GAME ||--o{ USER_GAME : appears_in
     GAME ||--o{ REVIEW : receives
     GAME ||--o{ GAME_LIST_ITEM : included_in
 
     REVIEW ||--o{ COMMENT : has
     REVIEW ||--o{ LIKE : receives
-
     GAME_LIST ||--o{ GAME_LIST_ITEM : contains
 
     USER {
@@ -104,7 +123,7 @@ erDiagram
         string id PK
         string userId FK
         string gameId FK
-        enum status "WISHLIST, BACKLOG, PLAYING, etc."
+        enum status
         int rating
         float playtimeHours
     }
@@ -116,89 +135,127 @@ erDiagram
     }
 ```
 
----
+## Recommendation System
 
-## 🛠️ Tech Stack
+The recommendation flow is deliberately structured so the AI never invents random games. It starts from a real RAWG result set, then asks Groq to pick from that limited pool.
 
-### Frontend Client
-- **Framework:** React 19 optimized via top-tier React Compiler setups.
-- **Build Tool:** Vite for blazing fast HMR.
-- **Styling:** Tailwind CSS integrated with Framer Motion for liquid-smooth animations.
-- **Routing:** React Router v6.
-- **Data Visualization:** Chart.js & react-chartjs-2.
+```mermaid
+flowchart TD
+    A[User answers 6-question quiz] --> B[Frontend sends POST /recommend]
+    B --> C[Backend validates and trims answers]
+    C --> D[Map genre and platform to RAWG filters]
+    D --> E[Fetch a pool of real games from RAWG]
+    E --> F[Build a prompt with the candidate catalogue]
+    F --> G[Groq selects exactly 3 games]
+    G --> H[Validate returned rawgId values]
+    H --> I[Enrich and return recommendations]
+```
 
-### Backend Infrastructure
-- **Server:** Node.js with Express.js.
-- **Storage:** PostgreSQL combined with Prisma ORM for type-safe database queries.
-- **Security & User Sessions:** `bcrypt` for local hashing, `passport` / `passport-google-oauth20` for authentication flows, backed by `express-session`.
+The implementation lives in [backend/src/services/recommendation.service.js](backend/src/services/recommendation.service.js) and is triggered by [backend/src/routes/recommend.routes.js](backend/src/routes/recommend.routes.js). The frontend quiz lives in [frontend/src/pages/Recommend.jsx](frontend/src/pages/Recommend.jsx) and posts to the API through [frontend/src/api/recommendApi.js](frontend/src/api/recommendApi.js).
 
----
+Here is the actual logic in plain language:
 
-## 🚀 Local Setup & Getting Started
+1. The user answers mood, time available, genre, play style, platform, and streamer preference.
+2. The backend checks that the payload is present and that every required field is a non-empty string.
+3. The service converts genre and platform answers into RAWG query filters.
+4. RAWG returns a pool of real games, usually ordered by rating.
+5. A prompt is built that includes only that catalogue and instructs Groq to return exactly three picks.
+6. Groq responds with IDs, reasons, tags, a stream-friendly flag, and a match score.
+7. The service verifies that every returned ID exists in the RAWG pool before accepting it.
+8. If the AI response is bad or incomplete, the service falls back to the first three real games from the pool.
 
-### 1. Prerequisites
-Ensure you have the following installed onto your system:
-- **Node.js**: Version 18.x or newer.
-- **PostgreSQL**: Running locally or via a cloud instance (e.g., Supabase / Neon).
+That structure matters because it keeps the system useful and grounded. The AI explains and ranks, but the app still controls the source of truth. In other words, the model can choose, but it cannot hallucinate games outside the fetched catalogue.
 
-### 2. Environment Variables Configuration
-Duplicate the provided example environment setup at the root directory:
+## Recommendation UI
+
+The quiz is a six-step experience with an intro screen, animated transitions, a loading state, a results state, and a rate-limit recovery screen. The result cards show the title, metadata, explanation, tags, streamability, and score so the user gets both the suggestion and the reasoning behind it.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Intro
+    Intro --> Quiz
+    Quiz --> Loading
+    Loading --> Results
+    Loading --> RateLimit
+    RateLimit --> Loading
+    Results --> Quiz
+```
+
+## Tech Stack
+
+### Frontend
+
+- React 19 for the UI layer.
+- Vite for fast builds and refreshes.
+- Tailwind CSS for styling.
+- Framer Motion for page transitions and quiz animation.
+- Chart.js for analytics visualizations.
+- React Router for navigation.
+
+### Backend
+
+- Node.js and Express for the API.
+- Prisma for database access.
+- PostgreSQL for persistent storage.
+- Passport.js and express-session for authentication.
+- RAWG API for game metadata.
+- Groq for AI recommendation ranking and explanation generation.
+
+## Local Setup
+
+### Prerequisites
+
+- Node.js 18 or newer.
+- PostgreSQL running locally or through a hosted service.
+
+### Environment
+
+Copy your environment template and fill in the values your deployment needs.
 
 ```bash
 cp .env.example .env
 ```
-Once copied, edit `.env` and fill out the critical items:
-- `DATABASE_URL`: Connection string pointing to your PostgreSQL instance.
-- `RAWG_API_KEY`: API key grabbed from [RAWG Developer Portal](https://rawg.io/apidocs).
-- Google OAuth Client ID and Secret (If you wish to test OAuth).
 
-### 3. Installation
-You'll need two terminal windows actively open to run both halves of the project concurrently.
+Important variables include `DATABASE_URL`, `RAWG_API_KEY`, and the Google OAuth credentials if you want sign-in to work end to end.
 
-**Bootstrapping the Backend:**
+### Install Dependencies
+
+Run both halves of the project separately.
+
 ```bash
 cd backend
 npm install
-
-# Push the schema structure into your database
 npx prisma db push
-
-# Generate Prisma Client & seed the database if needed
 npx prisma generate
 ```
 
-**Bootstrapping the Frontend:**
 ```bash
 cd frontend
 npm install
 ```
 
-### 4. Running the Development Servers
+### Run Locally
 
-**Start backend API server:**
 ```bash
 cd backend
 npm run dev
-# The backend will default to http://localhost:3000
 ```
 
-**Start frontend React server:**
 ```bash
 cd frontend
 npm run dev
-# The frontend client will run on http://localhost:5173
 ```
 
+The backend defaults to `http://localhost:3000`, and the frontend defaults to `http://localhost:5173`.
+
+
+## Contribution
+
+1. Fork the project.
+2. Create a feature branch.
+3. Make your changes.
+4. Open a pull request.
+
 ---
 
-## 🤝 Contribution
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-*Happy Gaming, and may your backlog shrink!* 🕹️🚀
+Happy gaming, and may your backlog shrink.
