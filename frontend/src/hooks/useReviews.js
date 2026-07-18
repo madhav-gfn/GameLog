@@ -49,9 +49,10 @@ export const useReviews = () => {
         try {
             const currentReview = reviews.find((review) => review.id === reviewId);
             const shouldUnlike = Boolean(currentReview?.likedByMe);
-            const result = shouldUnlike
+            let result = shouldUnlike
                 ? await reviewApi.unlikeReview(reviewId)
                 : await reviewApi.likeReview(reviewId);
+
             const nextLikes = result?.data?.likes ?? result?.data?.likeCount;
 
             setReviews((prev) => prev.map((review) => {
@@ -65,6 +66,26 @@ export const useReviews = () => {
                 };
             }));
         } catch (err) {
+            if (err?.status === 409) {
+                try {
+                    const result = await reviewApi.unlikeReview(reviewId);
+                    const nextLikes = result?.data?.likes ?? result?.data?.likeCount;
+                    setReviews((prev) => prev.map((review) => {
+                        if (review.id !== reviewId) return review;
+                        return {
+                            ...review,
+                            likes: typeof nextLikes === 'number'
+                                ? nextLikes
+                                : Math.max((review.likes ?? review._count?.likes ?? 1) - 1, 0),
+                            likedByMe: false,
+                        };
+                    }));
+                    return;
+                } catch (unlikeErr) {
+                    setError(unlikeErr.message);
+                    return;
+                }
+            }
             setError(err.message);
         }
     };
