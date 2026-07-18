@@ -152,6 +152,14 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
         }),
     ]);
 
+    const reviewIds = recentReviews.map((review) => review.id);
+    const likedReviewIds = reviewIds.length > 0
+        ? new Set((await prisma.like.findMany({
+            where: { userId, reviewId: { in: reviewIds } },
+            select: { reviewId: true },
+        })).map((like) => like.reviewId))
+        : new Set();
+
     // Transform into unified feed items
     const feedItems = [];
 
@@ -180,6 +188,7 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
             content: review.content,
             rating: review.rating,
             likeCount: review._count.likes,
+            likedByMe: likedReviewIds.has(review.id),
             timestamp: review.createdAt,
         });
     }

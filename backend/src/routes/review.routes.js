@@ -9,19 +9,19 @@ import {
     createReviewComment,
     getReviewComments,
 } from '../controllers/review.controller.js';
-import { requireAuth } from '../middleware/auth.middleware.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 
 const router = express.Router();
 
 // GET /api/reviews/game/:gameId - get reviews for a game (public)
-router.get('/game/:gameId', getGameReviews);
+router.get('/game/:gameId', optionalAuth, getGameReviews);
 
 // GET /api/reviews/game/:gameId/stats - get review stats (public)
 router.get('/game/:gameId/stats', getReviewStats);
 
 // GET /api/reviews/user/:userId - get reviews by a user (public)
-router.get('/user/:userId', getUserReviews);
+router.get('/user/:userId', optionalAuth, getUserReviews);
 
 // POST /api/reviews/game/:gameId - create/update review (protected)
 router.post('/game/:gameId',

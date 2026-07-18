@@ -3,7 +3,7 @@ import prisma from '../config/database.js';
 /**
  * Get paginated reviews for a game, sortable by likes count or date.
  */
-export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'createdAt' }) {
+export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'createdAt', currentUserId = null }) {
     let orderBy;
     if (sortBy === 'likes') {
         orderBy = { likes: { _count: 'desc' } };
@@ -27,8 +27,26 @@ export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'c
         prisma.review.count({ where }),
     ]);
 
+    let likedReviewIds = new Set();
+    if (currentUserId && reviews.length > 0) {
+        const likes = await prisma.like.findMany({
+            where: {
+                userId: currentUserId,
+                reviewId: { in: reviews.map((review) => review.id) },
+            },
+            select: { reviewId: true },
+        });
+        likedReviewIds = new Set(likes.map((like) => like.reviewId));
+    }
+
+    const normalizedReviews = reviews.map((review) => ({
+        ...review,
+        likes: review._count.likes,
+        likedByMe: likedReviewIds.has(review.id),
+    }));
+
     return {
-        reviews,
+        reviews: normalizedReviews,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
 }
@@ -36,7 +54,7 @@ export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'c
 /**
  * Get all reviews by a user.
  */
-export async function getUserReviews(userId, { page = 1, limit = 20 }) {
+export async function getUserReviews(userId, { page = 1, limit = 20, currentUserId = null }) {
     const where = { userId };
 
     const [reviews, total] = await Promise.all([
@@ -53,8 +71,26 @@ export async function getUserReviews(userId, { page = 1, limit = 20 }) {
         prisma.review.count({ where }),
     ]);
 
+    let likedReviewIds = new Set();
+    if (currentUserId && reviews.length > 0) {
+        const likes = await prisma.like.findMany({
+            where: {
+                userId: currentUserId,
+                reviewId: { in: reviews.map((review) => review.id) },
+            },
+            select: { reviewId: true },
+        });
+        likedReviewIds = new Set(likes.map((like) => like.reviewId));
+    }
+
+    const normalizedReviews = reviews.map((review) => ({
+        ...review,
+        likes: review._count.likes,
+        likedByMe: likedReviewIds.has(review.id),
+    }));
+
     return {
-        reviews,
+        reviews: normalizedReviews,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
 }
@@ -132,7 +168,11 @@ export async function createReview(userId, gameId, { content, rating }) {
             });
         }
 
-        return review;
+        return {
+            ...review,
+            likes: review._count.likes,
+            likedByMe: false,
+        };
     });
 }
 
@@ -282,13 +322,20 @@ export async function likeReview(userId, reviewId) {
     // Return updated like count
     const likeCount = await prisma.like.count({ where: { reviewId } });
 
-    return { liked: true, likeCount };
+    return { liked: true, likes: likeCount, likeCount };
 }
 
 /**
  * Unlike a review.
  */
 export async function unlikeReview(userId, reviewId) {
+    const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true } });
+    if (!review) {
+        const error = new Error('Review not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
     try {
         await prisma.like.delete({
             where: { userId_reviewId: { userId, reviewId } },
@@ -301,6 +348,9 @@ export async function unlikeReview(userId, reviewId) {
         }
         throw err;
     }
+
+    const likeCount = await prisma.like.count({ where: { reviewId } });
+    return { liked: false, likes: likeCount, likeCount };
 }
 
 /**

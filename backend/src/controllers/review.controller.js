@@ -7,6 +7,7 @@ export async function getGameReviews(req, res, next) {
             page: parseInt(page),
             limit: parseInt(limit),
             sortBy,
+            currentUserId: req.user?.id || null,
         });
         res.json({ success: true, ...result });
     } catch (error) {
@@ -20,6 +21,7 @@ export async function getUserReviews(req, res, next) {
         const result = await reviewService.getUserReviews(req.params.userId, {
             page: parseInt(page),
             limit: parseInt(limit),
+            currentUserId: req.user?.id || null,
         });
         res.json({ success: true, ...result });
     } catch (error) {
@@ -47,8 +49,8 @@ export async function likeReview(req, res, next) {
 
 export async function unlikeReview(req, res, next) {
     try {
-        await reviewService.unlikeReview(req.user.id, req.params.reviewId);
-        res.json({ success: true, message: 'Review unliked' });
+        const result = await reviewService.unlikeReview(req.user.id, req.params.reviewId);
+        res.json({ success: true, data: result });
     } catch (error) {
         next(error);
     }

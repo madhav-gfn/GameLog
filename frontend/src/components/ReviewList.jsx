@@ -52,7 +52,7 @@ export const ReviewList = ({ gameId }) => {
                             onClick={() => likeReview(review.id)}
                             className="flex items-center gap-1 hover:text-primary transition-colors font-bold"
                         >
-                            ❤️ {review.likes} Likes
+                            ❤️ {review.likes ?? review._count?.likes ?? 0} {review.likedByMe ? 'Liked' : 'Like'}
                         </button>
                     </div>
                 </div>
