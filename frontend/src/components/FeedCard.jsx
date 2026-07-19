@@ -26,14 +26,13 @@ const formatPlaytime = (hours) => {
   return `${hours}h`;
 };
 
-/** @param {{item:any, onOpenGame?: (game:any)=>void}} props */
-export const FeedCard = ({ item, onOpenGame }) => {
+/** @param {{item:any, onOpenGame?: (game:any)=>void, onToggleLike?: (activityId:string)=>Promise<void>}} props */
+export const FeedCard = ({ item, onOpenGame, onToggleLike }) => {
   const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const actionVerb = actionLabelByType[item.type] || 'shared';
   const displayName = item.user?.displayName || item.user?.username || 'Unknown Player';
   const username = item.user?.username || 'unknown';
-  const [liked, setLiked] = useState(false);
   const [isLikePopping, setIsLikePopping] = useState(false);
 
   useEffect(() => {
@@ -43,7 +42,8 @@ export const FeedCard = ({ item, onOpenGame }) => {
   }, [isLikePopping, reduceMotion]);
 
   const handleLike = () => {
-    setLiked((prev) => !prev);
+    if (item.type !== 'REVIEW') return;
+    onToggleLike?.(item.id);
     if (!reduceMotion) setIsLikePopping(true);
   };
 
@@ -126,9 +126,9 @@ export const FeedCard = ({ item, onOpenGame }) => {
           whileTap={reduceMotion ? undefined : { scale: 0.94 }}
           variants={likeButtonVariants}
           transition={getTransition(reduceMotion, 'like')}
-          className={`transition-colors ${liked ? 'text-primary' : 'hover:text-primary'}`}
+          className={`transition-colors ${item.likedByMe ? 'text-primary' : 'hover:text-primary'} ${item.type !== 'REVIEW' ? 'cursor-default' : ''}`}
         >
-          ♥ {liked ? 'Liked' : 'Like'}
+          ♥ {item.type === 'REVIEW' ? `${item.likeCount ?? 0} ${item.likedByMe ? 'Liked' : 'Like'}` : 'Like'}
         </Motion.button>
       </footer>
     </Motion.article>
