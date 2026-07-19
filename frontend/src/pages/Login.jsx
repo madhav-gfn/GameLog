@@ -22,12 +22,22 @@ export const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showColdStartHint, setShowColdStartHint] = useState(false);
   const [form, setForm] = useState({
     username: '',
     email: '',
     password: '',
     displayName: '',
   });
+
+  React.useEffect(() => {
+    if (!loading) {
+      setShowColdStartHint(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setShowColdStartHint(true), 4000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -125,6 +135,15 @@ export const Login = () => {
               {error && (
                 <div className="mb-5 rounded-xl border border-crimson bg-crimson/15 px-4 py-3 text-center text-sm font-bold text-crimson">
                   {error}
+                </div>
+              )}
+
+              {showColdStartHint && (
+                <div className="mb-5 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-center">
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">Be patient — the backend is starting</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-300">
+                    The server sleeps when idle on free hosting. Waking it up can take about a minute.
+                  </p>
                 </div>
               )}
 
