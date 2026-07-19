@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useReviews } from '../hooks/useReviews';
+import { ReviewComments } from './ReviewComments';
 
 export const ReviewList = ({ gameId }) => {
     const { reviews, fetchGameReviews, likeReview, loading } = useReviews();
+    const [openCommentsId, setOpenCommentsId] = useState(null);
 
     useEffect(() => {
         if (gameId) {
@@ -47,14 +49,35 @@ export const ReviewList = ({ gameId }) => {
 
                     <p className="text-gray-300 mb-3">{review.content}</p>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => likeReview(review.id)}
-                            className="flex items-center gap-1 hover:text-primary transition-colors font-bold"
+                            aria-pressed={Boolean(review.likedByMe)}
+                            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors ${
+                                review.likedByMe
+                                    ? 'border-primary bg-primary/15 text-primary'
+                                    : 'border-gray-700 text-gray-300 hover:border-primary hover:text-primary'
+                            }`}
                         >
-                            ❤️ {review.likes ?? review._count?.likes ?? 0} {review.likedByMe ? 'Liked' : 'Like'}
+                            <span className="material-symbols-outlined text-lg leading-none">favorite</span>
+                            {review.likes ?? review._count?.likes ?? 0} {review.likedByMe ? 'Liked' : 'Like'}
+                        </button>
+
+                        <button
+                            onClick={() => setOpenCommentsId((current) => (current === review.id ? null : review.id))}
+                            aria-expanded={openCommentsId === review.id}
+                            className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors ${
+                                openCommentsId === review.id
+                                    ? 'border-primary bg-primary/15 text-primary'
+                                    : 'border-gray-700 text-gray-300 hover:border-primary hover:text-primary'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-lg leading-none">chat_bubble</span>
+                            {review._count?.comments ?? 0} {(review._count?.comments ?? 0) === 1 ? 'Comment' : 'Comments'}
                         </button>
                     </div>
+
+                    {openCommentsId === review.id && <ReviewComments reviewId={review.id} />}
                 </div>
             ))}
         </div>

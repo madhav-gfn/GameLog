@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion, useReducedMotion } from '../utils/motionCompat';
 import { RatingStars } from './RatingStars';
+import { ReviewComments } from './ReviewComments';
 import {
   coverZoomVariants,
   getTransition,
@@ -34,6 +35,8 @@ export const FeedCard = ({ item, onOpenGame, onToggleLike }) => {
   const displayName = item.user?.displayName || item.user?.username || 'Unknown Player';
   const username = item.user?.username || 'unknown';
   const [isLikePopping, setIsLikePopping] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(item.commentCount ?? 0);
 
   useEffect(() => {
     if (!isLikePopping || reduceMotion) return undefined;
@@ -119,18 +122,47 @@ export const FeedCard = ({ item, onOpenGame, onToggleLike }) => {
         </div>
       )}
 
-      <footer className="mt-4 pt-3 border-t border-gray-800 flex items-center gap-4 text-xs text-gray-400">
-        <Motion.button
-          onClick={handleLike}
-          animate={isLikePopping ? 'liked' : 'idle'}
-          whileTap={reduceMotion ? undefined : { scale: 0.94 }}
-          variants={likeButtonVariants}
-          transition={getTransition(reduceMotion, 'like')}
-          className={`transition-colors ${item.likedByMe ? 'text-primary' : 'hover:text-primary'} ${item.type !== 'REVIEW' ? 'cursor-default' : ''}`}
-        >
-          ♥ {item.type === 'REVIEW' ? `${item.likeCount ?? 0} ${item.likedByMe ? 'Liked' : 'Like'}` : 'Like'}
-        </Motion.button>
+      <footer className="mt-4 pt-3 border-t border-gray-800 flex items-center gap-3">
+        {item.type === 'REVIEW' ? (
+          <>
+            <Motion.button
+              onClick={handleLike}
+              animate={isLikePopping ? 'liked' : 'idle'}
+              whileTap={reduceMotion ? undefined : { scale: 0.94 }}
+              variants={likeButtonVariants}
+              transition={getTransition(reduceMotion, 'like')}
+              aria-pressed={Boolean(item.likedByMe)}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors ${
+                item.likedByMe
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-gray-700 text-gray-300 hover:border-primary hover:text-primary'
+              }`}
+            >
+              <span className="material-symbols-outlined text-lg leading-none">favorite</span>
+              {item.likeCount ?? 0} {item.likedByMe ? 'Liked' : 'Like'}
+            </Motion.button>
+
+            <button
+              onClick={() => setShowComments((current) => !current)}
+              aria-expanded={showComments}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors ${
+                showComments
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-gray-700 text-gray-300 hover:border-primary hover:text-primary'
+              }`}
+            >
+              <span className="material-symbols-outlined text-lg leading-none">chat_bubble</span>
+              {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
+            </button>
+          </>
+        ) : (
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Game log update</span>
+        )}
       </footer>
+
+      {item.type === 'REVIEW' && showComments && (
+        <ReviewComments reviewId={item.id} onCountChange={setCommentCount} />
+      )}
     </Motion.article>
   );
 };
