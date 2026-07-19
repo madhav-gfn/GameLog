@@ -8,6 +8,7 @@ import { listApi } from '../api/listApi';
 import { ListsManager } from '../components/ListsManager';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { GameCard } from '../components/GameCard';
+import { FollowListModal } from '../components/FollowListModal';
 
 const adaptStats = (profile, analytics, social, listCount) => ({
   followers: profile?.stats?.followers || profile?._count?.followers || social?.followers || 0,
@@ -32,6 +33,7 @@ export const Profile = () => {
   const [listCount, setListCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [followModal, setFollowModal] = useState(null); // null | 'followers' | 'following'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -184,18 +186,39 @@ export const Profile = () => {
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
         {[
-          { label: 'Followers', value: stats.followers },
-          { label: 'Following', value: stats.following },
+          { label: 'Followers', value: stats.followers, onClick: () => setFollowModal('followers') },
+          { label: 'Following', value: stats.following, onClick: () => setFollowModal('following') },
           { label: 'Games', value: stats.games },
           { label: 'Completion', value: `${stats.completion}%` },
           { label: 'Lists', value: stats.lists },
         ].map((stat) => (
-          <div key={stat.label} className="bg-navy border-2 border-graphite rounded p-4 text-center">
-            <p className="text-2xl font-bold text-primary">{stat.value}</p>
-            <p className="text-xs text-gray-500 uppercase font-bold">{stat.label}</p>
-          </div>
+          stat.onClick ? (
+            <button
+              key={stat.label}
+              type="button"
+              onClick={stat.onClick}
+              className="bg-navy border-2 border-graphite rounded p-4 text-center transition-colors hover:border-primary focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+              title={`View ${stat.label.toLowerCase()}`}
+            >
+              <p className="text-2xl font-bold text-primary">{stat.value}</p>
+              <p className="text-xs text-gray-500 uppercase font-bold">{stat.label}</p>
+            </button>
+          ) : (
+            <div key={stat.label} className="bg-navy border-2 border-graphite rounded p-4 text-center">
+              <p className="text-2xl font-bold text-primary">{stat.value}</p>
+              <p className="text-xs text-gray-500 uppercase font-bold">{stat.label}</p>
+            </div>
+          )
         ))}
       </div>
+
+      {followModal && (
+        <FollowListModal
+          userId={profileUserId}
+          mode={followModal}
+          onClose={() => setFollowModal(null)}
+        />
+      )}
 
       <div className="mb-6 border-b-2 border-graphite">
         <div className="flex gap-8">
