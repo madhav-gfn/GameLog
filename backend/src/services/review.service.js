@@ -18,7 +18,7 @@ export async function getGameReviews(gameId, { page = 1, limit = 20, sortBy = 'c
             where,
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
-                _count: { select: { likes: true } },
+                _count: { select: { likes: true, comments: true } },
             },
             orderBy,
             skip: (page - 1) * limit,
@@ -62,7 +62,7 @@ export async function getUserReviews(userId, { page = 1, limit = 20, currentUser
             where,
             include: {
                 game: { select: { id: true, title: true, coverImage: true } },
-                _count: { select: { likes: true } },
+                _count: { select: { likes: true, comments: true } },
             },
             orderBy: { createdAt: 'desc' },
             skip: (page - 1) * limit,
