@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const navItems = [
@@ -18,6 +18,7 @@ const labelClass = (expanded) => `overflow-hidden whitespace-nowrap transition-a
  */
 export const Sidebar = ({ expanded = false, pinned = false, onTogglePinned, onCreateLog }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isActive = (path) => {
     if (path === '/profile' && location.pathname === '/profile') {
@@ -102,7 +103,10 @@ export const Sidebar = ({ expanded = false, pinned = false, onTogglePinned, onCr
         <div className="space-y-2">
           <button
             type="button"
-            className={`flex items-center rounded-xl text-gray-400 transition-colors hover:bg-graphite hover:text-white focus-visible:ring-2 focus-visible:ring-primary ${
+            onClick={() => navigate('/settings')}
+            className={`flex items-center rounded-xl transition-colors hover:bg-graphite hover:text-white focus-visible:ring-2 focus-visible:ring-primary ${
+              location.pathname === '/settings' ? 'text-primary' : 'text-gray-400'
+            } ${
               expanded
                 ? 'w-full justify-start gap-4 px-4 py-3 font-bold uppercase tracking-wider text-left'
                 : 'mx-auto h-12 w-12 justify-center'
