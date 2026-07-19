@@ -220,6 +220,27 @@ export const Login = () => {
                 </div>
               </div>
 
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    setError('');
+                    try {
+                      await signin({ email: 'demo@gamelog.app', password: 'demo1234' });
+                    } catch (err) {
+                      setError(err.message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-graphite bg-navy py-3 font-bold uppercase tracking-wider text-white transition-colors hover:border-primary hover:text-primary"
+                >
+                  <span className="material-symbols-outlined text-lg">play_arrow</span>
+                  Try Demo Account
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleGoogleLogin}
