@@ -25,4 +25,9 @@ export const reviewApi = {
     async likeReview(reviewId) {
         return api.post(`/reviews/${reviewId}/like`);
     },
+
+    // Unlike a review
+    async unlikeReview(reviewId) {
+        return api.delete(`/reviews/${reviewId}/like`);
+    },
 };

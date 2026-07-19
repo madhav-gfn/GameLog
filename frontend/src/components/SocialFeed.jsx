@@ -7,7 +7,7 @@ import { feedCardVariants, getTransition } from './animations/variants';
 const PAGE_LIMIT = 8;
 
 export const SocialFeed = ({ filter = 'all' }) => {
-  const { feed, feedPagination, fetchFeed, loading, error } = useFollow();
+  const { feed, feedPagination, fetchFeed, toggleFeedReviewLike, loading, error } = useFollow();
   const [loadingMore, setLoadingMore] = useState(false);
   const reduceMotion = useReducedMotion();
   const loadMoreRef = useRef(null);
@@ -79,7 +79,7 @@ export const SocialFeed = ({ filter = 'all' }) => {
           animate="visible"
           transition={{ ...getTransition(reduceMotion, 'feedEntry'), delay: reduceMotion ? 0 : index * 0.04 }}
         >
-          <FeedCard item={activity} />
+          <FeedCard item={activity} onToggleLike={toggleFeedReviewLike} />
         </Motion.div>
       ))}
 

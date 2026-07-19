@@ -38,6 +38,7 @@ export const normalizeFeedActivity = (activity = {}) => {
     status: rawUserGame.status || null,
     rating: rawUserGame.rating ?? null,
     likeCount: activity.likeCount || 0,
+    likedByMe: Boolean(activity.likedByMe),
     platform: rawUserGame.platform || game.platforms?.[0] || null,
     gameId: rawUserGame.gameId || game.rawgId,
     game,

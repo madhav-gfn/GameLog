@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { followApi } from '../api/followApi.js';
+import { reviewApi } from '../api/reviewApi.js';
 import { normalizeFeedResponse } from '../utils/responseAdapters';
 
 export const useFollow = () => {
@@ -80,6 +81,30 @@ export const useFollow = () => {
         }
     };
 
+    const toggleFeedReviewLike = async (activityId) => {
+        try {
+            const activity = feed.find((item) => item.type === 'REVIEW' && item.id === activityId);
+            if (!activity) return;
+
+            const shouldUnlike = Boolean(activity.likedByMe);
+            const result = shouldUnlike
+                ? await reviewApi.unlikeReview(activityId)
+                : await reviewApi.likeReview(activityId);
+            const nextLikeCount = result?.data?.likes ?? result?.data?.likeCount;
+
+            setFeed((prev) => prev.map((item) => {
+                if (item.type !== 'REVIEW' || item.id !== activityId) return item;
+                return {
+                    ...item,
+                    likedByMe: !shouldUnlike,
+                    likeCount: typeof nextLikeCount === 'number' ? nextLikeCount : item.likeCount,
+                };
+            }));
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
     return {
         followers,
         following,
@@ -90,6 +115,7 @@ export const useFollow = () => {
         fetchFollowers,
         fetchFollowing,
         fetchFeed,
+        toggleFeedReviewLike,
         followUser,
         unfollowUser,
         checkFollowStatus
