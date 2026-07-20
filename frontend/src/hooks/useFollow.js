@@ -35,11 +35,13 @@ export const useFollow = () => {
         }
     }, []);
 
-    const fetchFeed = useCallback(async ({ page = 1, limit = 10, append = false } = {}) => {
+    const fetchFeed = useCallback(async ({ page = 1, limit = 10, append = false, type = 'all', following = false } = {}) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await followApi.getSocialFeed({ page, limit });
+            const params = { page, limit, type };
+            if (following) params.following = true;
+            const response = await followApi.getSocialFeed(params);
             const normalized = normalizeFeedResponse(response, page, limit);
             const nextActivities = normalized.activities;
             setFeed((prev) => (append ? [...prev, ...nextActivities] : nextActivities));

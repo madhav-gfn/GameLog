@@ -19,6 +19,10 @@ The recommendation system was the part that finally made the app feel opinionate
 
 By February, the experience felt much more complete. The social feed, analytics, and recommendation quiz stopped feeling like extras and started behaving like the same product. The app now has a cleaner rhythm, better guardrails, and a more obvious reason to exist beyond just storing game data.
 
+i was doing the feed flitering like click on tag and that type of feed will appear that seems easy just a client side thing
+
+Why it's not just client-side filtering: I first tried filtering type/following purely in the browser over the already-fetched feed (simpler, no backend touch) but this demo dataset has all 152 reviews clustered older than the 575 most recent logs, so a client-side "Reviews" filter would've needed ~72 sequential page-fetches before showing a single card. Moved that filtering into the DB query instead, so every tab returns real data on the first request. Verified via curl and Playwright: all five tags now populate instantly with correct counts (152 reviews, 575 logs, 358 following-scoped items), each with a tailored empty-state message. No overflow or console errors on mobile or desktop, lint is clean, and the production build still succeeds.
+
 ## What The App Does
 
 GameLog lets a user search games, save them to a personal library, track status changes, rate what they played, write reviews, and follow other players. The app also shows charts and summaries so people can see patterns in their taste over time. On top of that, the recommendation page asks a short quiz and returns three curated games that fit the answer set.

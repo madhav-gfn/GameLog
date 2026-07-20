@@ -4,7 +4,10 @@ import { SocialFeed } from '../components/SocialFeed';
 export const Home = () => {
   const socialFilterButtons = useMemo(() => ([
     { key: 'all', label: 'Recent' },
+    { key: 'following', label: 'Following' },
     { key: 'popular', label: 'Popular' },
+    { key: 'log', label: 'Logs' },
+    { key: 'review', label: 'Reviews' },
   ]), []);
 
   const [feedFilter, setFeedFilter] = React.useState('all');

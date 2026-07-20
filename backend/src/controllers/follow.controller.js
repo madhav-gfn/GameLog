@@ -49,8 +49,11 @@ export async function checkFollowStatus(req, res, next) {
 
 export async function getSocialFeed(req, res, next) {
     try {
-        const { page = 1, limit = 20 } = req.query;
-        const result = await followService.getSocialFeed(req.user.id, parseInt(page), parseInt(limit));
+        const { page = 1, limit = 20, type = 'all', following } = req.query;
+        const result = await followService.getSocialFeed(req.user.id, parseInt(page), parseInt(limit), {
+            type,
+            onlyFollowing: following === 'true' || following === '1',
+        });
         res.json({ success: true, ...result });
     } catch (error) {
         next(error);

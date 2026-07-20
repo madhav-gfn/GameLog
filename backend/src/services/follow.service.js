@@ -129,24 +129,44 @@ export async function isFollowing(followerId, followingId) {
 /**
  * Get social feed - recent activity from users the caller follows.
  * Queries UserGame logs and Reviews instead of Activity model.
+ *
+ * @param {{type?: 'all'|'log'|'review', onlyFollowing?: boolean}} options
+ *   `type` restricts which source table(s) are queried — needed because a client-side
+ *   type filter over the merged/time-sorted feed can land dozens of pages deep before
+ *   finding a match if one activity type is chronologically clustered (e.g. all reviews
+ *   older than the most recent few hundred logs).
  */
-export async function getSocialFeed(userId, page = 1, limit = 20) {
+export async function getSocialFeed(userId, page = 1, limit = 20, options = {}) {
+    const { type = 'all', onlyFollowing = false } = options;
+
+    let where = { userId: { not: userId } };
+    if (onlyFollowing) {
+        const follows = await prisma.follow.findMany({
+            where: { followerId: userId },
+            select: { followingId: true },
+        });
+        where = { userId: { in: follows.map((f) => f.followingId) } };
+    }
+
+    const includeLogs = type !== 'review';
+    const includeReviews = type !== 'log';
+
     // Fetch enough of each source (sorted desc) that merging them yields a correct
     // top-N: the top N of a merge of two sorted lists needs at most N from each list.
     const take = page * limit;
 
     const [recentLogs, recentReviews, logsTotal, reviewsTotal] = await Promise.all([
-        prisma.userGame.findMany({
-            where: { userId: { not: userId } },
+        includeLogs ? prisma.userGame.findMany({
+            where,
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
                 game: { select: { id: true, title: true, coverImage: true } },
             },
             orderBy: { updatedAt: 'desc' },
             take,
-        }),
-        prisma.review.findMany({
-            where: { userId: { not: userId } },
+        }) : [],
+        includeReviews ? prisma.review.findMany({
+            where,
             include: {
                 user: { select: { id: true, username: true, displayName: true, avatar: true } },
                 game: { select: { id: true, title: true, coverImage: true } },
@@ -154,9 +174,9 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
             },
             orderBy: { createdAt: 'desc' },
             take,
-        }),
-        prisma.userGame.count({ where: { userId: { not: userId } } }),
-        prisma.review.count({ where: { userId: { not: userId } } }),
+        }) : [],
+        includeLogs ? prisma.userGame.count({ where }) : 0,
+        includeReviews ? prisma.review.count({ where }) : 0,
     ]);
 
     const reviewIds = recentReviews.map((review) => review.id);
