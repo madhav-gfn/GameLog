@@ -131,8 +131,11 @@ export async function isFollowing(followerId, followingId) {
  * Queries UserGame logs and Reviews instead of Activity model.
  */
 export async function getSocialFeed(userId, page = 1, limit = 20) {
-    // Fetch recent game logs and reviews from other users (global feed, own posts excluded)
-    const [recentLogs, recentReviews] = await Promise.all([
+    // Fetch enough of each source (sorted desc) that merging them yields a correct
+    // top-N: the top N of a merge of two sorted lists needs at most N from each list.
+    const take = page * limit;
+
+    const [recentLogs, recentReviews, logsTotal, reviewsTotal] = await Promise.all([
         prisma.userGame.findMany({
             where: { userId: { not: userId } },
             include: {
@@ -140,7 +143,7 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
                 game: { select: { id: true, title: true, coverImage: true } },
             },
             orderBy: { updatedAt: 'desc' },
-            take: limit * 2, // Fetch extra to merge with reviews
+            take,
         }),
         prisma.review.findMany({
             where: { userId: { not: userId } },
@@ -150,8 +153,10 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
                 _count: { select: { likes: true, comments: true } },
             },
             orderBy: { createdAt: 'desc' },
-            take: limit * 2,
+            take,
         }),
+        prisma.userGame.count({ where: { userId: { not: userId } } }),
+        prisma.review.count({ where: { userId: { not: userId } } }),
     ]);
 
     const reviewIds = recentReviews.map((review) => review.id);
@@ -199,7 +204,7 @@ export async function getSocialFeed(userId, page = 1, limit = 20) {
     // Sort by timestamp descending and paginate
     feedItems.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    const total = feedItems.length;
+    const total = logsTotal + reviewsTotal;
     const start = (page - 1) * limit;
     const paged = feedItems.slice(start, start + limit);
 

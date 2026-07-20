@@ -88,20 +88,23 @@ export const Library = () => {
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`flex items-center gap-2 px-4 py-2 rounded font-bold uppercase text-sm whitespace-nowrap transition-colors ${activeTab === tab.value
-                ? 'bg-primary text-navy'
-                : 'bg-graphite text-white hover:bg-navy'
-              }`}
-          >
-            <span className="material-symbols-outlined text-lg">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
+      <div className="relative mb-8">
+        <div className="flex gap-2 overflow-x-auto pb-2 pr-8 scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`flex items-center gap-2 px-4 py-2 rounded font-bold uppercase text-sm whitespace-nowrap transition-colors shrink-0 ${activeTab === tab.value
+                  ? 'bg-primary text-navy'
+                  : 'bg-graphite text-white hover:bg-navy'
+                }`}
+            >
+              <span className="material-symbols-outlined text-lg">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-background-dark to-transparent" aria-hidden="true" />
       </div>
 
       {/* Content */}

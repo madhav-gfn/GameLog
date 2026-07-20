@@ -174,12 +174,12 @@ export const SearchBar = ({ onSearch, placeholder = 'Search games, people, lists
           onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full px-4 py-2 rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-bg-card dark:bg-dark-bg-card text-light-text-primary dark:text-dark-text-primary placeholder-light-text-tertiary dark:placeholder-dark-text-tertiary focus:border-light-accent-primary dark:focus:border-dark-accent-primary transition-colors"
+          className="w-full px-4 py-2 rounded-lg border border-graphite bg-background-dark/60 text-white placeholder-gray-500 focus:border-primary transition-colors"
           aria-label="Search"
         />
         <button
           type="submit"
-          className="px-4 py-2 rounded-lg bg-light-accent-primary dark:bg-dark-accent-primary text-white hover:opacity-90 transition-opacity"
+          className="px-4 py-2 rounded-lg bg-primary text-navy hover:bg-yellow-400 transition-colors"
           aria-label="Search"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,23 +189,23 @@ export const SearchBar = ({ onSearch, placeholder = 'Search games, people, lists
       </form>
 
       {isOpen && query.trim() && (
-        <div className="absolute z-50 mt-2 w-full rounded-lg border border-light-border-default dark:border-dark-border-default bg-light-bg-card dark:bg-dark-bg-card shadow-lg p-2 max-h-80 overflow-auto">
-          {isLoading && <p className="px-3 py-2 text-sm text-light-text-secondary dark:text-dark-text-secondary">Searching...</p>}
+        <div className="absolute z-50 mt-2 w-full rounded-lg border-2 border-graphite bg-navy shadow-2xl p-2 max-h-80 overflow-auto">
+          {isLoading && <p className="px-3 py-2 text-sm text-gray-400">Searching...</p>}
 
           {!isLoading && !hasVisibleSuggestions && (
-            <p className="px-3 py-2 text-sm text-light-text-secondary dark:text-dark-text-secondary">No quick matches found.</p>
+            <p className="px-3 py-2 text-sm text-gray-400">No quick matches found.</p>
           )}
 
           {!isLoading && suggestions.games.length > 0 && (
             <div>
-              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-light-text-secondary dark:text-dark-text-secondary">Games</p>
+              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-gray-400">Games</p>
               {suggestions.games.map((game) => {
                 const optionIndex = flattenedOptions.findIndex((option) => option.group === 'games' && option.id === game.id);
                 return (
                   <button
                     key={`game-${game.id}`}
                     type="button"
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${highlightedIndex === optionIndex ? 'bg-light-accent-primary/20 dark:bg-dark-accent-primary/20' : 'hover:bg-light-bg-subtle dark:hover:bg-dark-bg-subtle'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm text-white ${highlightedIndex === optionIndex ? 'bg-primary/20' : 'hover:bg-graphite/50'}`}
                     onMouseEnter={() => setHighlightedIndex(optionIndex)}
                     onClick={() => selectOption({ ...game, group: 'games' })}
                   >
@@ -218,14 +218,14 @@ export const SearchBar = ({ onSearch, placeholder = 'Search games, people, lists
 
           {!isLoading && suggestions.users.length > 0 && (
             <div>
-              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-light-text-secondary dark:text-dark-text-secondary">People</p>
+              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-gray-400">People</p>
               {suggestions.users.map((user) => {
                 const optionIndex = flattenedOptions.findIndex((option) => option.group === 'users' && option.id === user.id);
                 return (
                   <button
                     key={`user-${user.id}`}
                     type="button"
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${highlightedIndex === optionIndex ? 'bg-light-accent-primary/20 dark:bg-dark-accent-primary/20' : 'hover:bg-light-bg-subtle dark:hover:bg-dark-bg-subtle'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm text-white ${highlightedIndex === optionIndex ? 'bg-primary/20' : 'hover:bg-graphite/50'}`}
                     onMouseEnter={() => setHighlightedIndex(optionIndex)}
                     onClick={() => selectOption({ ...user, group: 'users' })}
                   >
@@ -238,14 +238,14 @@ export const SearchBar = ({ onSearch, placeholder = 'Search games, people, lists
 
           {!isLoading && suggestions.lists.length > 0 && (
             <div>
-              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-light-text-secondary dark:text-dark-text-secondary">Lists</p>
+              <p className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider text-gray-400">Lists</p>
               {suggestions.lists.map((list) => {
                 const optionIndex = flattenedOptions.findIndex((option) => option.group === 'lists' && option.id === list.id);
                 return (
                   <button
                     key={`list-${list.id}`}
                     type="button"
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${highlightedIndex === optionIndex ? 'bg-light-accent-primary/20 dark:bg-dark-accent-primary/20' : 'hover:bg-light-bg-subtle dark:hover:bg-dark-bg-subtle'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm text-white ${highlightedIndex === optionIndex ? 'bg-primary/20' : 'hover:bg-graphite/50'}`}
                     onMouseEnter={() => setHighlightedIndex(optionIndex)}
                     onClick={() => selectOption({ ...list, group: 'lists' })}
                   >

@@ -57,14 +57,14 @@ export const SocialFeed = ({ filter = 'all' }) => {
     return () => observer.disconnect();
   }, [fetchFeed, feedPagination.page, feedPagination.limit, hasMore, loading, loadingMore]);
 
-  if (loading && feed.length === 0) return <div className="text-center py-8 text-light-text-secondary dark:text-dark-text-secondary">Loading activity feed...</div>;
+  if (loading && feed.length === 0) return <div className="text-center py-8 text-gray-400">Loading activity feed...</div>;
   if (error) return <div className="text-center py-8 text-red-500">Failed to load feed</div>;
   if (filteredActivities.length === 0) {
     return (
-      <div className="text-center py-10 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded-xl">
+      <div className="text-center py-10 bg-navy rounded-xl">
         <span className="text-3xl mb-3 block">🎮</span>
-        <h3 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">No activity yet</h3>
-        <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Follow gamers to populate your feed.</p>
+        <h3 className="text-lg font-semibold text-white mb-2">No activity yet</h3>
+        <p className="text-sm text-gray-400">Follow gamers to populate your feed.</p>
       </div>
     );
   }

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { gameApi } from '../../api/gameApi';
 import { Sidebar } from '../Sidebar';
-import { ThemeToggle } from '../ThemeToggle';
 import { SearchBar } from '../SearchBar';
 import { NotificationDropdown } from '../NotificationDropdown';
 import { LogModal } from '../LogModal';
@@ -44,26 +43,33 @@ const MobileBottomNav = () => {
 
 const NavBar = ({ onOpenLog }) => {
   return (
-    <header className="bg-navy border-b-2 border-graphite px-4 sm:px-6">
-      <div className="flex h-16 w-full items-center gap-4">
-        <Link to="/" className="flex items-center gap-3 hover:no-underline">
+    <header className="bg-navy border-b-2 border-graphite px-3 sm:px-6">
+      <div className="flex h-16 w-full items-center gap-2 sm:gap-4">
+        <Link to="/" className="flex shrink-0 items-center gap-3 hover:no-underline">
           <span className="material-symbols-outlined text-primary text-3xl">sports_esports</span>
-          <div>
+          <div className="hidden sm:block">
             <h1 className="text-white text-lg font-bold uppercase tracking-widest leading-none">GAMELOG</h1>
             <p className="text-primary text-[10px] uppercase tracking-[0.2em]">Control Center</p>
           </div>
         </Link>
 
-        <div className="flex-1 min-w-0 max-w-2xl">
+        <div className="hidden sm:block flex-1 min-w-0 max-w-2xl">
           <SearchBar className="w-full" />
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <Link
+          to="/search"
+          className="sm:hidden flex items-center justify-center p-2 rounded-lg text-gray-300 hover:text-white hover:bg-graphite/50"
+          aria-label="Search"
+        >
+          <span className="material-symbols-outlined">search</span>
+        </Link>
+
+        <div className="ml-auto flex items-center gap-1 sm:gap-3">
           <button onClick={onOpenLog} className="hidden md:inline-flex px-3 py-2 rounded bg-crimson text-white text-xs font-bold uppercase tracking-wide focus-visible:ring-2 focus-visible:ring-primary">
             New log (N)
           </button>
           <NotificationDropdown />
-          <ThemeToggle />
           <ProfileDropdown />
         </div>
       </div>

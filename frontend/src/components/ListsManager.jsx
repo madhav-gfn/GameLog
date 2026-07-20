@@ -12,7 +12,7 @@ export const ListsManager = ({ userId }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4">Game Lists</h3>
+      <h3 className="text-xl font-bold text-white mb-4">Game Lists</h3>
       <ListGrid lists={lists} loading={loading} error={error ? 'Failed to load lists' : null} onDelete={deleteList} />
     </div>
   );
